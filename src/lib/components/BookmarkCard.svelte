@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Bookmark } from '$lib/types';
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
+	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	interface Props {
 		bookmark: Bookmark;
@@ -9,6 +10,7 @@
 	let { bookmark }: Props = $props();
 
 	let isEditing = $state(false);
+	let showDeleteConfirm = $state(false);
 	let editedTitle = $state(bookmark.title);
 	let editedUrl = $state(bookmark.url);
 	let editedDescription = $state(bookmark.description || '');
@@ -54,12 +56,25 @@
 	}
 
 	/**
-	 * Delete bookmark with confirmation
+	 * Show delete confirmation dialog
 	 */
-	async function deleteBookmark() {
-		if (confirm(`Are you sure you want to delete "${bookmark.title}"?`)) {
-			await bookmarksStore.remove(bookmark.id);
-		}
+	function showDeleteConfirmation() {
+		showDeleteConfirm = true;
+	}
+
+	/**
+	 * Delete bookmark after confirmation
+	 */
+	async function confirmDelete() {
+		await bookmarksStore.remove(bookmark.id);
+		showDeleteConfirm = false;
+	}
+
+	/**
+	 * Cancel delete operation
+	 */
+	function cancelDelete() {
+		showDeleteConfirm = false;
 	}
 
 	/**
@@ -184,7 +199,7 @@
 						</svg>
 					</button>
 					<button
-						onclick={deleteBookmark}
+						onclick={showDeleteConfirmation}
 						class="p-1.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
 						aria-label="Delete bookmark"
 						title="Delete"
@@ -234,3 +249,15 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<ConfirmDialog
+	open={showDeleteConfirm}
+	title="Delete Bookmark"
+	message={`Are you sure you want to delete "${bookmark.title}"? This action cannot be undone.`}
+	confirmText="Delete"
+	cancelText="Cancel"
+	onConfirm={confirmDelete}
+	onCancel={cancelDelete}
+	danger={true}
+/>
