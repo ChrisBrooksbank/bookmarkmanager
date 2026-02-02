@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 15
+- Build iterations: 16
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -60,8 +60,8 @@
 - [x] Add folder assignment to bookmark form (spec: organization.md)
 - [x] Build TagCloud/TagList component (spec: organization.md)
 - [x] Implement tag creation and assignment in bookmark form (spec: organization.md)
-- [ ] Add tag filtering UI (spec: organization.md)
-- [ ] Implement folder filtering (show bookmarks by folder) (spec: organization.md)
+- [x] Add tag filtering UI (spec: organization.md)
+- [x] Implement folder filtering (show bookmarks by folder) (spec: organization.md)
 
 ### Phase 5: Search & Filter
 
