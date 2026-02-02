@@ -28,6 +28,31 @@ export default ts.config(
 		}
 	},
 	{
+		files: ['netlify/functions/**/*.ts'],
+		languageOptions: {
+			globals: {
+				...globals.node
+			}
+		},
+		rules: {
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{
+					argsIgnorePattern: '^_',
+					varsIgnorePattern: '^_'
+				}
+			]
+		}
+	},
+	{
+		files: ['scripts/**/*.js'],
+		languageOptions: {
+			globals: {
+				...globals.node
+			}
+		}
+	},
+	{
 		ignores: ['.svelte-kit/', 'build/', 'dist/', 'node_modules/', '.netlify/']
 	}
 );

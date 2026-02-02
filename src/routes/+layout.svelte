@@ -5,12 +5,19 @@
 	import AddBookmarkForm from '$lib/components/AddBookmarkForm.svelte';
 	import FolderForm from '$lib/components/FolderForm.svelte';
 	import FolderTree from '$lib/components/FolderTree.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
+	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
+	import SortSelector from '$lib/components/SortSelector.svelte';
+	import ExportMenu from '$lib/components/ExportMenu.svelte';
+	import Bookmarklet from '$lib/components/Bookmarklet.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
-	import { onMount } from 'svelte';
-	import type { Folder } from '$lib/types';
+	import { onMount, setContext } from 'svelte';
+	import { browser } from '$app/environment';
+	import { createShortcutHandler, getDefaultShortcuts } from '$lib/utils/keyboard';
+	import type { Folder, Bookmark } from '$lib/types';
 
 	let { children } = $props();
 
@@ -19,8 +26,14 @@
 
 	// Modal state
 	let addBookmarkModalOpen = $state(false);
+
+	// URL parameters for pre-filling bookmark form (from bookmarklet)
+	let urlParam = $state('');
+	let titleParam = $state('');
+	let descriptionParam = $state('');
 	let folderModalOpen = $state(false);
 	let deleteFolderModalOpen = $state(false);
+	let bookmarkletModalOpen = $state(false);
 
 	// Folder operation state
 	let folderToEdit = $state<Folder | null>(null);
@@ -35,6 +48,174 @@
 		foldersStore.load();
 		tagsStore.load();
 		uiStateStore.initTheme();
+
+		// Check for URL parameters (from bookmarklet)
+		if (browser) {
+			const params = new URLSearchParams(window.location.search);
+			const url = params.get('url');
+			const title = params.get('title');
+			const description = params.get('description');
+
+			if (url) {
+				urlParam = decodeURIComponent(url);
+				titleParam = title ? decodeURIComponent(title) : '';
+				descriptionParam = description ? decodeURIComponent(description) : '';
+				// Open the add bookmark modal with pre-filled data
+				addBookmarkModalOpen = true;
+
+				// Clear URL parameters after reading them
+				window.history.replaceState({}, '', window.location.pathname);
+			}
+		}
+
+		// Register service worker update handler
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+				// Check for updates periodically
+				setInterval(
+					() => {
+						registration.update();
+					},
+					60 * 60 * 1000
+				); // Check every hour
+
+				// Listen for new service worker
+				registration.addEventListener('updatefound', () => {
+					const newWorker = registration.installing;
+					if (newWorker) {
+						newWorker.addEventListener('statechange', () => {
+							if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+								// New service worker is ready, notify user
+								console.log('New version available. Refresh to update.');
+							}
+						});
+					}
+				});
+			});
+		}
+	});
+
+	/**
+	 * Focus search input
+	 */
+	function focusSearch() {
+		// Query for the search input element
+		const searchInput = document.querySelector(
+			'input[aria-label="Search bookmarks"]'
+		) as HTMLInputElement;
+		if (searchInput) {
+			searchInput.focus();
+		}
+	}
+
+	/**
+	 * Toggle between grid and list view
+	 */
+	function toggleViewMode() {
+		const newMode = uiStateStore.viewMode === 'grid' ? 'list' : 'grid';
+		uiStateStore.setViewMode(newMode);
+	}
+
+	/**
+	 * Initialize keyboard shortcuts using $effect
+	 */
+	$effect(() => {
+		if (!browser) return;
+
+		const shortcuts = getDefaultShortcuts({
+			onSearch: focusSearch,
+			onToggleView: toggleViewMode,
+			onToggleSidebar: toggleSidebar,
+			onAddBookmark: openAddBookmarkModal,
+			onGridView: () => uiStateStore.setViewMode('grid'),
+			onListView: () => uiStateStore.setViewMode('list')
+		});
+
+		const handler = createShortcutHandler(shortcuts);
+
+		window.addEventListener('keydown', handler);
+
+		return () => {
+			window.removeEventListener('keydown', handler);
+		};
+	});
+
+	/**
+	 * Filter and sort bookmarks based on search query, selected folder, tags, date range, and sort order
+	 */
+	let filteredBookmarks = $derived.by(() => {
+		let results = bookmarksStore.items;
+
+		// Filter by search query if present
+		if (uiStateStore.searchQuery.trim() !== '') {
+			const lowerQuery = uiStateStore.searchQuery.toLowerCase();
+			results = results.filter(
+				(b) =>
+					b.title.toLowerCase().includes(lowerQuery) ||
+					b.url.toLowerCase().includes(lowerQuery) ||
+					(b.description && b.description.toLowerCase().includes(lowerQuery))
+			);
+		}
+
+		// Filter by folder if one is selected
+		if (uiStateStore.selectedFolderId !== null) {
+			results = results.filter((b) => b.folderId === uiStateStore.selectedFolderId);
+		}
+
+		// Filter by tags if any are selected (AND logic - bookmark must have ALL selected tags)
+		if (uiStateStore.selectedTagIds.length > 0) {
+			results = results.filter((bookmark) =>
+				uiStateStore.selectedTagIds.every((tagId) => bookmark.tags.includes(tagId))
+			);
+		}
+
+		// Filter by date range if not 'all'
+		if (uiStateStore.dateRange !== 'all') {
+			const now = Date.now();
+			let cutoffTime: number;
+
+			switch (uiStateStore.dateRange) {
+				case 'last-7-days':
+					cutoffTime = now - 7 * 24 * 60 * 60 * 1000;
+					break;
+				case 'last-30-days':
+					cutoffTime = now - 30 * 24 * 60 * 60 * 1000;
+					break;
+				case 'last-90-days':
+					cutoffTime = now - 90 * 24 * 60 * 60 * 1000;
+					break;
+				default:
+					cutoffTime = 0;
+			}
+
+			results = results.filter((bookmark) => bookmark.createdAt >= cutoffTime);
+		}
+
+		// Sort results based on selected sort order
+		const sorted = [...results];
+		switch (uiStateStore.sortBy) {
+			case 'newest':
+				sorted.sort((a, b) => b.createdAt - a.createdAt);
+				break;
+			case 'oldest':
+				sorted.sort((a, b) => a.createdAt - b.createdAt);
+				break;
+			case 'alphabetical':
+				sorted.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+				break;
+			case 'recently-updated':
+				sorted.sort((a, b) => b.updatedAt - a.updatedAt);
+				break;
+		}
+
+		return sorted;
+	});
+
+	// Provide filtered bookmarks to child components via context
+	setContext('filteredBookmarks', {
+		get bookmarks(): Bookmark[] {
+			return filteredBookmarks;
+		}
 	});
 
 	function toggleSidebar() {
@@ -71,6 +252,10 @@
 
 	function closeAddBookmarkModal() {
 		addBookmarkModalOpen = false;
+		// Clear URL params when closing modal
+		urlParam = '';
+		titleParam = '';
+		descriptionParam = '';
 	}
 
 	function openCreateFolderModal(parentId: string | null = null) {
@@ -251,12 +436,26 @@
 		</div>
 
 		<!-- Sidebar Footer -->
-		<div class="p-4 border-t border-gray-200 dark:border-gray-700">
+		<div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
 			<button
 				onclick={openAddBookmarkModal}
 				class="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
 			>
 				+ Add Bookmark
+			</button>
+			<button
+				onclick={() => (bookmarkletModalOpen = true)}
+				class="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center justify-center gap-2"
+			>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+					/>
+				</svg>
+				Bookmarklet
 			</button>
 		</div>
 	</aside>
@@ -276,7 +475,7 @@
 		<header
 			class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4"
 		>
-			<div class="flex items-center justify-between">
+			<div class="flex items-center justify-between gap-4 mb-4">
 				<!-- Mobile Menu Button -->
 				<button
 					onclick={toggleSidebar}
@@ -363,6 +562,47 @@
 					</button>
 				</div>
 			</div>
+
+			<!-- Search Bar and Filters -->
+			<div class="flex items-center gap-3">
+				<!-- Search Bar -->
+				<div class="flex-1">
+					<SearchBar />
+				</div>
+
+				<!-- Date Range Filter -->
+				<div class="w-48">
+					<DateRangeFilter />
+				</div>
+
+				<!-- Sort Selector -->
+				<div class="w-48">
+					<SortSelector />
+				</div>
+
+				<!-- Clear Filters Button -->
+				{#if uiStateStore.hasActiveFilters()}
+					<button
+						onclick={() => uiStateStore.clearFilters()}
+						class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+						aria-label="Clear all filters"
+						title="Clear all filters"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+						Clear
+					</button>
+				{/if}
+
+				<!-- Export Menu -->
+				<ExportMenu bookmarks={filteredBookmarks} folders={foldersStore.items} />
+			</div>
 		</header>
 
 		<!-- Content Area -->
@@ -374,7 +614,12 @@
 
 <!-- Add Bookmark Modal -->
 <Modal open={addBookmarkModalOpen} title="Add Bookmark" onClose={closeAddBookmarkModal}>
-	<AddBookmarkForm onClose={closeAddBookmarkModal} />
+	<AddBookmarkForm
+		onClose={closeAddBookmarkModal}
+		initialUrl={urlParam}
+		initialTitle={titleParam}
+		initialDescription={descriptionParam}
+	/>
 </Modal>
 
 <!-- Folder Create/Edit Modal -->
@@ -455,3 +700,12 @@
 		</div>
 	</div>
 {/if}
+
+<!-- Bookmarklet Modal -->
+<Modal
+	open={bookmarkletModalOpen}
+	title="Bookmarklet"
+	onClose={() => (bookmarkletModalOpen = false)}
+>
+	<Bookmarklet />
+</Modal>

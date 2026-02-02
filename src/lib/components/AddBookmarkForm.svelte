@@ -7,14 +7,18 @@
 
 	interface Props {
 		onClose?: () => void;
+		initialUrl?: string;
+		initialTitle?: string;
+		initialDescription?: string;
 	}
 
-	let { onClose }: Props = $props();
+	let { onClose, initialUrl = '', initialTitle = '', initialDescription = '' }: Props = $props();
 
 	// Form state
-	let url = $state('');
-	let title = $state('');
-	let description = $state('');
+	let url = $state(initialUrl);
+	let title = $state(initialTitle);
+	let description = $state(initialDescription);
+	let notes = $state('');
 	let folderId = $state<string | null>(null);
 	let selectedTagIds = $state<string[]>([]);
 	let tagInput = $state('');
@@ -131,6 +135,7 @@
 				url: url.trim(),
 				title: title.trim() || new URL(url.trim()).hostname,
 				description: description.trim() || undefined,
+				notes: notes.trim() || undefined,
 				folderId: folderId || undefined,
 				tags: selectedTagIds,
 				createdAt: now,
@@ -143,6 +148,7 @@
 			url = '';
 			title = '';
 			description = '';
+			notes = '';
 			folderId = null;
 			selectedTagIds = [];
 			tagInput = '';
@@ -236,6 +242,21 @@
 			id="description"
 			bind:value={description}
 			placeholder="Add a note about this bookmark"
+			rows="3"
+			class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none"
+			disabled={submitting}
+		></textarea>
+	</div>
+
+	<!-- Notes Input -->
+	<div>
+		<label for="notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+			Notes (optional)
+		</label>
+		<textarea
+			id="notes"
+			bind:value={notes}
+			placeholder="Personal annotations for research context"
 			rows="3"
 			class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none"
 			disabled={submitting}

@@ -1,12 +1,17 @@
 <script lang="ts">
 	import type { Bookmark } from '$lib/types';
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
+	import { uiStateStore } from '$lib/stores/uiState.svelte';
+	import { highlightText } from '$lib/utils/highlight';
 
 	interface Props {
 		bookmark: Bookmark;
+		searchQuery?: string;
 	}
 
-	let { bookmark }: Props = $props();
+	let { bookmark, searchQuery = '' }: Props = $props();
+
+	let isSelected = $derived(uiStateStore.isBookmarkSelected(bookmark.id));
 
 	let isEditing = $state(false);
 	let editedTitle = $state(bookmark.title);
@@ -83,17 +88,35 @@
 			return url;
 		}
 	}
+
+	/**
+	 * Toggle bookmark selection
+	 */
+	function toggleSelection(e: Event) {
+		e.preventDefault();
+		uiStateStore.toggleBookmarkSelection(bookmark.id);
+	}
 </script>
 
 {#if isEditing}
 	<!-- Edit Mode - Compact Form -->
-	<div class="bg-gray-50 dark:bg-gray-900 border-l-4 border-blue-500 p-3 mb-2 rounded-r">
+	<div class="bg-gray-50 dark:bg-gray-900 border-l-4 border-blue-500 p-3 mb-2 rounded-r flex gap-3">
+		<!-- Selection Checkbox -->
+		<div class="flex-shrink-0 pt-2">
+			<input
+				type="checkbox"
+				checked={isSelected}
+				onchange={toggleSelection}
+				class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+				aria-label="Select bookmark"
+			/>
+		</div>
 		<form
 			onsubmit={(e) => {
 				e.preventDefault();
 				saveEdit();
 			}}
-			class="space-y-2"
+			class="space-y-2 flex-1"
 		>
 			<!-- Title and URL in same row -->
 			<div class="flex gap-2">
@@ -154,8 +177,19 @@
 {:else}
 	<!-- Compact List View -->
 	<div
-		class="flex items-start gap-3 py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors group"
+		class={`flex items-start gap-3 py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors group ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
 	>
+		<!-- Selection Checkbox -->
+		<div class="flex-shrink-0 pt-1">
+			<input
+				type="checkbox"
+				checked={isSelected}
+				onchange={toggleSelection}
+				class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+				aria-label="Select bookmark"
+			/>
+		</div>
+
 		<!-- Main Content Area -->
 		<div class="flex-1 min-w-0">
 			<!-- Title -->
@@ -166,7 +200,8 @@
 					rel="noopener noreferrer"
 					class="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
 				>
-					{bookmark.title}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html highlightText(bookmark.title, searchQuery)}
 				</a>
 			</div>
 
@@ -179,7 +214,8 @@
 					class="text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
 					title={bookmark.url}
 				>
-					{getDomain(bookmark.url)}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html highlightText(getDomain(bookmark.url), searchQuery)}
 				</a>
 				<span class="text-gray-400 dark:text-gray-600">•</span>
 				<span
@@ -202,7 +238,8 @@
 			<!-- Description (optional) -->
 			{#if bookmark.description}
 				<p class="text-sm text-gray-500 dark:text-gray-500 mt-1 truncate">
-					{bookmark.description}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html highlightText(bookmark.description, searchQuery)}
 				</p>
 			{/if}
 		</div>

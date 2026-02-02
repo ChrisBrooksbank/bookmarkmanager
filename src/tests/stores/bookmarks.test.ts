@@ -369,4 +369,294 @@ describe('bookmarksStore', () => {
 			expect(fromLocalStorage).toHaveLength(0);
 		});
 	});
+
+	describe('bulkAddTags', () => {
+		it('should add tags to multiple bookmarks', async () => {
+			const bookmark1 = createTestBookmark({ tags: ['tag-1'] });
+			const bookmark2 = createTestBookmark({ tags: ['tag-2'] });
+			const bookmark3 = createTestBookmark({ tags: [] });
+
+			await db.add(bookmark1);
+			await db.add(bookmark2);
+			await db.add(bookmark3);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkAddTags([bookmark1.id, bookmark2.id], ['tag-3']);
+
+			const updated1 = bookmarksStore.getById(bookmark1.id);
+			const updated2 = bookmarksStore.getById(bookmark2.id);
+			const updated3 = bookmarksStore.getById(bookmark3.id);
+
+			expect(updated1?.tags).toContain('tag-1');
+			expect(updated1?.tags).toContain('tag-3');
+			expect(updated2?.tags).toContain('tag-2');
+			expect(updated2?.tags).toContain('tag-3');
+			expect(updated3?.tags).not.toContain('tag-3');
+
+			// Verify it was updated in IndexedDB
+			const fromDb1 = await db.getById(bookmark1.id);
+			const fromDb2 = await db.getById(bookmark2.id);
+			expect(fromDb1?.tags).toContain('tag-3');
+			expect(fromDb2?.tags).toContain('tag-3');
+		});
+
+		it('should not duplicate existing tags', async () => {
+			const bookmark = createTestBookmark({ tags: ['tag-1', 'tag-2'] });
+
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkAddTags([bookmark.id], ['tag-2', 'tag-3']);
+
+			const updated = bookmarksStore.items[0];
+			expect(updated.tags).toHaveLength(3);
+			expect(updated.tags).toContain('tag-1');
+			expect(updated.tags).toContain('tag-2');
+			expect(updated.tags).toContain('tag-3');
+		});
+
+		it('should update updatedAt timestamp', async () => {
+			const bookmark = createTestBookmark();
+			const originalUpdatedAt = bookmark.updatedAt;
+
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			// Wait a bit to ensure timestamp changes
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			await bookmarksStore.bulkAddTags([bookmark.id], ['tag-1']);
+
+			const updated = bookmarksStore.items[0];
+			expect(updated.updatedAt).toBeGreaterThan(originalUpdatedAt);
+		});
+
+		it('should fallback to localStorage when IndexedDB fails', async () => {
+			const bookmark = createTestBookmark({ tags: ['tag-1'] });
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			vi.spyOn(db, 'update').mockRejectedValue(new Error('IndexedDB failed'));
+
+			await bookmarksStore.bulkAddTags([bookmark.id], ['tag-2']);
+
+			expect(bookmarksStore.items[0].tags).toContain('tag-2');
+			expect(bookmarksStore.error).toBeTruthy();
+		});
+	});
+
+	describe('bulkRemoveTags', () => {
+		it('should remove tags from multiple bookmarks', async () => {
+			const bookmark1 = createTestBookmark({ tags: ['tag-1', 'tag-2', 'tag-3'] });
+			const bookmark2 = createTestBookmark({ tags: ['tag-1', 'tag-4'] });
+			const bookmark3 = createTestBookmark({ tags: ['tag-1'] });
+
+			await db.add(bookmark1);
+			await db.add(bookmark2);
+			await db.add(bookmark3);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkRemoveTags([bookmark1.id, bookmark2.id], ['tag-1']);
+
+			const updated1 = bookmarksStore.getById(bookmark1.id);
+			const updated2 = bookmarksStore.getById(bookmark2.id);
+			const updated3 = bookmarksStore.getById(bookmark3.id);
+
+			expect(updated1?.tags).not.toContain('tag-1');
+			expect(updated1?.tags).toContain('tag-2');
+			expect(updated1?.tags).toContain('tag-3');
+			expect(updated2?.tags).not.toContain('tag-1');
+			expect(updated2?.tags).toContain('tag-4');
+			expect(updated3?.tags).toContain('tag-1'); // Not included in bulk operation
+
+			// Verify it was updated in IndexedDB
+			const fromDb1 = await db.getById(bookmark1.id);
+			const fromDb2 = await db.getById(bookmark2.id);
+			expect(fromDb1?.tags).not.toContain('tag-1');
+			expect(fromDb2?.tags).not.toContain('tag-1');
+		});
+
+		it('should handle removing multiple tags at once', async () => {
+			const bookmark = createTestBookmark({ tags: ['tag-1', 'tag-2', 'tag-3'] });
+
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkRemoveTags([bookmark.id], ['tag-1', 'tag-2']);
+
+			const updated = bookmarksStore.items[0];
+			expect(updated.tags).toHaveLength(1);
+			expect(updated.tags).toContain('tag-3');
+		});
+
+		it('should update updatedAt timestamp', async () => {
+			const bookmark = createTestBookmark({ tags: ['tag-1'] });
+			const originalUpdatedAt = bookmark.updatedAt;
+
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			// Wait a bit to ensure timestamp changes
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			await bookmarksStore.bulkRemoveTags([bookmark.id], ['tag-1']);
+
+			const updated = bookmarksStore.items[0];
+			expect(updated.updatedAt).toBeGreaterThan(originalUpdatedAt);
+		});
+
+		it('should fallback to localStorage when IndexedDB fails', async () => {
+			const bookmark = createTestBookmark({ tags: ['tag-1', 'tag-2'] });
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			vi.spyOn(db, 'update').mockRejectedValue(new Error('IndexedDB failed'));
+
+			await bookmarksStore.bulkRemoveTags([bookmark.id], ['tag-1']);
+
+			expect(bookmarksStore.items[0].tags).not.toContain('tag-1');
+			expect(bookmarksStore.items[0].tags).toContain('tag-2');
+			expect(bookmarksStore.error).toBeTruthy();
+		});
+	});
+
+	describe('bulkMoveToFolder', () => {
+		it('should move multiple bookmarks to a folder', async () => {
+			const bookmark1 = createTestBookmark({ folderId: null });
+			const bookmark2 = createTestBookmark({ folderId: 'folder-1' });
+			const bookmark3 = createTestBookmark({ folderId: null });
+
+			await db.add(bookmark1);
+			await db.add(bookmark2);
+			await db.add(bookmark3);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkMoveToFolder([bookmark1.id, bookmark2.id], 'folder-2');
+
+			const updated1 = bookmarksStore.getById(bookmark1.id);
+			const updated2 = bookmarksStore.getById(bookmark2.id);
+			const updated3 = bookmarksStore.getById(bookmark3.id);
+
+			expect(updated1?.folderId).toBe('folder-2');
+			expect(updated2?.folderId).toBe('folder-2');
+			expect(updated3?.folderId).toBeNull();
+
+			// Verify it was updated in IndexedDB
+			const fromDb1 = await db.getById(bookmark1.id);
+			const fromDb2 = await db.getById(bookmark2.id);
+			expect(fromDb1?.folderId).toBe('folder-2');
+			expect(fromDb2?.folderId).toBe('folder-2');
+		});
+
+		it('should move bookmarks to root (null folder)', async () => {
+			const bookmark1 = createTestBookmark({ folderId: 'folder-1' });
+			const bookmark2 = createTestBookmark({ folderId: 'folder-2' });
+
+			await db.add(bookmark1);
+			await db.add(bookmark2);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkMoveToFolder([bookmark1.id, bookmark2.id], null);
+
+			const updated1 = bookmarksStore.getById(bookmark1.id);
+			const updated2 = bookmarksStore.getById(bookmark2.id);
+
+			expect(updated1?.folderId).toBeNull();
+			expect(updated2?.folderId).toBeNull();
+		});
+
+		it('should update updatedAt timestamp', async () => {
+			const bookmark = createTestBookmark({ folderId: null });
+			const originalUpdatedAt = bookmark.updatedAt;
+
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			// Wait a bit to ensure timestamp changes
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			await bookmarksStore.bulkMoveToFolder([bookmark.id], 'folder-1');
+
+			const updated = bookmarksStore.items[0];
+			expect(updated.updatedAt).toBeGreaterThan(originalUpdatedAt);
+		});
+
+		it('should fallback to localStorage when IndexedDB fails', async () => {
+			const bookmark = createTestBookmark({ folderId: 'folder-1' });
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			vi.spyOn(db, 'update').mockRejectedValue(new Error('IndexedDB failed'));
+
+			await bookmarksStore.bulkMoveToFolder([bookmark.id], 'folder-2');
+
+			expect(bookmarksStore.items[0].folderId).toBe('folder-2');
+			expect(bookmarksStore.error).toBeTruthy();
+		});
+	});
+
+	describe('bulkDelete', () => {
+		it('should delete multiple bookmarks', async () => {
+			const bookmark1 = createTestBookmark();
+			const bookmark2 = createTestBookmark();
+			const bookmark3 = createTestBookmark();
+
+			await db.add(bookmark1);
+			await db.add(bookmark2);
+			await db.add(bookmark3);
+			await bookmarksStore.load();
+
+			expect(bookmarksStore.items).toHaveLength(3);
+
+			await bookmarksStore.bulkDelete([bookmark1.id, bookmark2.id]);
+
+			expect(bookmarksStore.items).toHaveLength(1);
+			expect(bookmarksStore.getById(bookmark1.id)).toBeUndefined();
+			expect(bookmarksStore.getById(bookmark2.id)).toBeUndefined();
+			expect(bookmarksStore.getById(bookmark3.id)).toBeDefined();
+
+			// Verify it was deleted from IndexedDB
+			const fromDb1 = await db.getById(bookmark1.id);
+			const fromDb2 = await db.getById(bookmark2.id);
+			const fromDb3 = await db.getById(bookmark3.id);
+			expect(fromDb1).toBeUndefined();
+			expect(fromDb2).toBeUndefined();
+			expect(fromDb3).toBeDefined();
+		});
+
+		it('should handle empty array', async () => {
+			const bookmark = createTestBookmark();
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkDelete([]);
+
+			expect(bookmarksStore.items).toHaveLength(1);
+		});
+
+		it('should handle non-existent bookmarks gracefully', async () => {
+			const bookmark = createTestBookmark();
+			await db.add(bookmark);
+			await bookmarksStore.load();
+
+			await bookmarksStore.bulkDelete(['non-existent-id']);
+
+			expect(bookmarksStore.items).toHaveLength(1);
+			expect(bookmarksStore.getById(bookmark.id)).toBeDefined();
+		});
+
+		it('should fallback to localStorage when IndexedDB fails', async () => {
+			const bookmark1 = createTestBookmark();
+			const bookmark2 = createTestBookmark();
+			await db.add(bookmark1);
+			await db.add(bookmark2);
+			await bookmarksStore.load();
+
+			vi.spyOn(db, 'delete').mockRejectedValue(new Error('IndexedDB failed'));
+
+			await bookmarksStore.bulkDelete([bookmark1.id]);
+
+			expect(bookmarksStore.items).toHaveLength(1);
+			expect(bookmarksStore.getById(bookmark1.id)).toBeUndefined();
+			expect(bookmarksStore.getById(bookmark2.id)).toBeDefined();
+			expect(bookmarksStore.error).toBeTruthy();
+		});
+	});
 });

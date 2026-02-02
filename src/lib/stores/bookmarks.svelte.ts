@@ -128,7 +128,7 @@ function createBookmarksStore() {
 	}
 
 	/**
-	 * Search bookmarks by text query (searches title, url, description)
+	 * Search bookmarks by text query (searches title, url, description, notes)
 	 */
 	function search(query: string): Bookmark[] {
 		const lowerQuery = query.toLowerCase();
@@ -136,7 +136,8 @@ function createBookmarksStore() {
 			(b) =>
 				b.title.toLowerCase().includes(lowerQuery) ||
 				b.url.toLowerCase().includes(lowerQuery) ||
-				(b.description && b.description.toLowerCase().includes(lowerQuery))
+				(b.description && b.description.toLowerCase().includes(lowerQuery)) ||
+				(b.notes && b.notes.toLowerCase().includes(lowerQuery))
 		);
 	}
 
@@ -153,6 +154,190 @@ function createBookmarksStore() {
 			console.error('Failed to clear bookmarks from IndexedDB, using localStorage:', err);
 			error = 'Failed to clear database, using local backup';
 			bookmarks = [];
+			saveToLocalStorage(bookmarks);
+		}
+	}
+
+	/**
+	 * Add tags to multiple bookmarks
+	 */
+	async function bulkAddTags(bookmarkIds: string[], tagIds: string[]): Promise<void> {
+		try {
+			const updates: Promise<unknown>[] = [];
+			const updatedBookmarks: Bookmark[] = [];
+
+			for (const id of bookmarkIds) {
+				const bookmark = bookmarks.find((b) => b.id === id);
+				if (bookmark) {
+					// Add tags that aren't already present
+					const newTags = [...new Set([...bookmark.tags, ...tagIds])];
+					const updatedBookmark = {
+						...bookmark,
+						tags: newTags,
+						updatedAt: Date.now()
+					};
+					updates.push(db.update(updatedBookmark));
+					updatedBookmarks.push(updatedBookmark);
+				}
+			}
+
+			await Promise.all(updates);
+
+			// Update local state
+			bookmarks = bookmarks.map((b) => {
+				const updated = updatedBookmarks.find((ub) => ub.id === b.id);
+				return updated || b;
+			});
+			saveToLocalStorage(bookmarks);
+		} catch (err) {
+			console.error('Failed to bulk add tags in IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+
+			// Update local state even on error
+			bookmarks = bookmarks.map((b) => {
+				if (bookmarkIds.includes(b.id)) {
+					const newTags = [...new Set([...b.tags, ...tagIds])];
+					return {
+						...b,
+						tags: newTags,
+						updatedAt: Date.now()
+					};
+				}
+				return b;
+			});
+			saveToLocalStorage(bookmarks);
+		}
+	}
+
+	/**
+	 * Remove tags from multiple bookmarks
+	 */
+	async function bulkRemoveTags(bookmarkIds: string[], tagIds: string[]): Promise<void> {
+		try {
+			const updates: Promise<unknown>[] = [];
+			const updatedBookmarks: Bookmark[] = [];
+
+			for (const id of bookmarkIds) {
+				const bookmark = bookmarks.find((b) => b.id === id);
+				if (bookmark) {
+					// Remove specified tags
+					const newTags = bookmark.tags.filter((tagId) => !tagIds.includes(tagId));
+					const updatedBookmark = {
+						...bookmark,
+						tags: newTags,
+						updatedAt: Date.now()
+					};
+					updates.push(db.update(updatedBookmark));
+					updatedBookmarks.push(updatedBookmark);
+				}
+			}
+
+			await Promise.all(updates);
+
+			// Update local state
+			bookmarks = bookmarks.map((b) => {
+				const updated = updatedBookmarks.find((ub) => ub.id === b.id);
+				return updated || b;
+			});
+			saveToLocalStorage(bookmarks);
+		} catch (err) {
+			console.error('Failed to bulk remove tags in IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+
+			// Update local state even on error
+			bookmarks = bookmarks.map((b) => {
+				if (bookmarkIds.includes(b.id)) {
+					const newTags = b.tags.filter((tagId) => !tagIds.includes(tagId));
+					return {
+						...b,
+						tags: newTags,
+						updatedAt: Date.now()
+					};
+				}
+				return b;
+			});
+			saveToLocalStorage(bookmarks);
+		}
+	}
+
+	/**
+	 * Move multiple bookmarks to a folder
+	 */
+	async function bulkMoveToFolder(bookmarkIds: string[], folderId: string | null): Promise<void> {
+		try {
+			const updates: Promise<unknown>[] = [];
+			const updatedBookmarks: Bookmark[] = [];
+
+			for (const id of bookmarkIds) {
+				const bookmark = bookmarks.find((b) => b.id === id);
+				if (bookmark) {
+					// Create a clean copy to avoid Svelte reactivity issues with structured clone
+					const updatedBookmark: Bookmark = {
+						id: bookmark.id,
+						url: bookmark.url,
+						title: bookmark.title,
+						description: bookmark.description,
+						notes: bookmark.notes,
+						folderId,
+						tags: [...bookmark.tags],
+						createdAt: bookmark.createdAt,
+						updatedAt: Date.now(),
+						faviconUrl: bookmark.faviconUrl
+					};
+					updates.push(db.update(updatedBookmark));
+					updatedBookmarks.push(updatedBookmark);
+				}
+			}
+
+			await Promise.all(updates);
+
+			// Update local state
+			bookmarks = bookmarks.map((b) => {
+				const updated = updatedBookmarks.find((ub) => ub.id === b.id);
+				return updated || b;
+			});
+			saveToLocalStorage(bookmarks);
+		} catch (err) {
+			console.error('Failed to bulk move to folder in IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+
+			// Update local state even on error
+			bookmarks = bookmarks.map((b) => {
+				if (bookmarkIds.includes(b.id)) {
+					return {
+						...b,
+						folderId,
+						updatedAt: Date.now()
+					};
+				}
+				return b;
+			});
+			saveToLocalStorage(bookmarks);
+		}
+	}
+
+	/**
+	 * Delete multiple bookmarks
+	 */
+	async function bulkDelete(bookmarkIds: string[]): Promise<void> {
+		try {
+			const deletes: Promise<unknown>[] = [];
+
+			for (const id of bookmarkIds) {
+				deletes.push(db.delete(id));
+			}
+
+			await Promise.all(deletes);
+
+			// Update local state
+			bookmarks = bookmarks.filter((b) => !bookmarkIds.includes(b.id));
+			saveToLocalStorage(bookmarks);
+		} catch (err) {
+			console.error('Failed to bulk delete from IndexedDB, using localStorage:', err);
+			error = 'Failed to delete from database, using local backup';
+
+			// Update local state even on error
+			bookmarks = bookmarks.filter((b) => !bookmarkIds.includes(b.id));
 			saveToLocalStorage(bookmarks);
 		}
 	}
@@ -175,7 +360,11 @@ function createBookmarksStore() {
 		getByFolderId,
 		getByTagId,
 		search,
-		clear
+		clear,
+		bulkAddTags,
+		bulkRemoveTags,
+		bulkMoveToFolder,
+		bulkDelete
 	};
 }
 

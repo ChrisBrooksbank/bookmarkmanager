@@ -40,6 +40,8 @@ export interface Bookmark {
 	title: string;
 	/** Optional description or notes about the bookmark */
 	description?: string;
+	/** Optional personal notes/annotations for research context */
+	notes?: string;
 	/** Optional folder ID this bookmark belongs to */
 	folderId?: string | null;
 	/** Array of tag IDs associated with this bookmark */
@@ -50,4 +52,6 @@ export interface Bookmark {
 	updatedAt: number;
 	/** Optional URL to the page's favicon */
 	faviconUrl?: string;
+	/** Optional Open Graph image URL for visual preview */
+	ogImage?: string;
 }

@@ -39,6 +39,7 @@ describe('uiStateStore', () => {
 			expect(uiStateStore.selectedFolderId).toBe(null);
 			expect(uiStateStore.selectedTagIds).toEqual([]);
 			expect(uiStateStore.themeMode).toBe('system');
+			expect(uiStateStore.selectedBookmarkIds).toEqual([]);
 		});
 
 		it('should not have active filters by default', () => {
@@ -330,6 +331,65 @@ describe('uiStateStore', () => {
 		it('should handle missing localStorage gracefully', () => {
 			// Even if localStorage is missing, the store should work
 			expect(() => uiStateStore.setViewMode('list')).not.toThrow();
+		});
+	});
+
+	describe('bookmark selection', () => {
+		it('should start with no bookmarks selected', () => {
+			expect(uiStateStore.selectedBookmarkIds).toEqual([]);
+		});
+
+		it('should toggle bookmark selection on', () => {
+			uiStateStore.toggleBookmarkSelection('bookmark-1');
+			expect(uiStateStore.selectedBookmarkIds).toEqual(['bookmark-1']);
+		});
+
+		it('should toggle bookmark selection off', () => {
+			uiStateStore.toggleBookmarkSelection('bookmark-1');
+			uiStateStore.toggleBookmarkSelection('bookmark-1');
+			expect(uiStateStore.selectedBookmarkIds).toEqual([]);
+		});
+
+		it('should select multiple bookmarks via toggle', () => {
+			uiStateStore.toggleBookmarkSelection('bookmark-1');
+			uiStateStore.toggleBookmarkSelection('bookmark-2');
+			uiStateStore.toggleBookmarkSelection('bookmark-3');
+			expect(uiStateStore.selectedBookmarkIds).toEqual(['bookmark-1', 'bookmark-2', 'bookmark-3']);
+		});
+
+		it('should check if bookmark is selected', () => {
+			uiStateStore.toggleBookmarkSelection('bookmark-1');
+			expect(uiStateStore.isBookmarkSelected('bookmark-1')).toBe(true);
+			expect(uiStateStore.isBookmarkSelected('bookmark-2')).toBe(false);
+		});
+
+		it('should select multiple bookmarks at once', () => {
+			uiStateStore.selectBookmarks(['bookmark-1', 'bookmark-2', 'bookmark-3']);
+			expect(uiStateStore.selectedBookmarkIds).toEqual(['bookmark-1', 'bookmark-2', 'bookmark-3']);
+		});
+
+		it('should replace previous selection when calling selectBookmarks', () => {
+			uiStateStore.selectBookmarks(['bookmark-1', 'bookmark-2']);
+			uiStateStore.selectBookmarks(['bookmark-3', 'bookmark-4']);
+			expect(uiStateStore.selectedBookmarkIds).toEqual(['bookmark-3', 'bookmark-4']);
+		});
+
+		it('should select all bookmarks', () => {
+			const allIds = ['bookmark-1', 'bookmark-2', 'bookmark-3', 'bookmark-4'];
+			uiStateStore.selectAll(allIds);
+			expect(uiStateStore.selectedBookmarkIds).toEqual(allIds);
+		});
+
+		it('should clear selection', () => {
+			uiStateStore.selectBookmarks(['bookmark-1', 'bookmark-2', 'bookmark-3']);
+			uiStateStore.clearSelection();
+			expect(uiStateStore.selectedBookmarkIds).toEqual([]);
+		});
+
+		it('should clear selection on reset', () => {
+			uiStateStore.selectBookmarks(['bookmark-1', 'bookmark-2']);
+			uiStateStore.reset();
+			expect(uiStateStore.selectedBookmarkIds).toEqual([]);
 		});
 	});
 

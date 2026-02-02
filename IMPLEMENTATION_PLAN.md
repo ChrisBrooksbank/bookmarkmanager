@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 16
+- Build iterations: 36
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -65,45 +65,45 @@
 
 ### Phase 5: Search & Filter
 
-- [ ] Build SearchBar component with debounced input (spec: search-filter.md)
-- [ ] Implement full-text search across title, URL, description (spec: search-filter.md)
-- [ ] Add search result highlighting (spec: search-filter.md)
-- [ ] Implement date range filtering (spec: search-filter.md)
-- [ ] Add sort options (newest, oldest, alphabetical, recently updated) (spec: search-filter.md)
-- [ ] Implement combined search with folder/tag filters (spec: search-filter.md)
-- [ ] Add result count display (spec: search-filter.md)
-- [ ] Implement clear filters button (spec: search-filter.md)
-- [ ] Add keyboard shortcut Ctrl/Cmd+K for search focus (spec: search-filter.md)
+- [x] Build SearchBar component with debounced input (spec: search-filter.md)
+- [x] Implement full-text search across title, URL, description (spec: search-filter.md)
+- [x] Add search result highlighting (spec: search-filter.md)
+- [x] Implement date range filtering (spec: search-filter.md)
+- [x] Add sort options (newest, oldest, alphabetical, recently updated) (spec: search-filter.md)
+- [x] Implement combined search with folder/tag filters (spec: search-filter.md)
+- [x] Add result count display (spec: search-filter.md)
+- [x] Implement clear filters button (spec: search-filter.md)
+- [x] Add keyboard shortcut Ctrl/Cmd+K for search focus (spec: search-filter.md)
 
 ### Phase 6: Import/Export
 
-- [ ] Create HTML parser for Netscape bookmark format (spec: import-export.md)
-- [ ] Implement import with folder structure preservation (spec: import-export.md)
-- [ ] Add import progress indicator (spec: import-export.md)
-- [ ] Implement duplicate URL handling (skip/replace/keep) (spec: import-export.md)
-- [ ] Create HTML export in Netscape format (spec: import-export.md)
-- [ ] Create JSON export with full data (spec: import-export.md)
-- [ ] Create CSV export utility (spec: import-export.md)
-- [ ] Add export selection (all or selected bookmarks) (spec: import-export.md)
+- [x] Create HTML parser for Netscape bookmark format (spec: import-export.md)
+- [x] Implement import with folder structure preservation (spec: import-export.md)
+- [x] Add import progress indicator (spec: import-export.md)
+- [x] Implement duplicate URL handling (skip/replace/keep) (spec: import-export.md)
+- [x] Create HTML export in Netscape format (spec: import-export.md)
+- [x] Create JSON export with full data (spec: import-export.md)
+- [x] Create CSV export utility (spec: import-export.md)
+- [x] Add export selection (all or selected bookmarks) (spec: import-export.md)
 
 ### Phase 7: Power User Features
 
-- [ ] Implement keyboard shortcuts system (spec: mvp-spec.md)
-- [ ] Add bulk selection UI (checkboxes on bookmarks) (spec: mvp-spec.md)
-- [ ] Implement bulk tag operations (spec: mvp-spec.md)
-- [ ] Implement bulk move to folder (spec: mvp-spec.md)
-- [ ] Implement bulk delete with confirmation (spec: mvp-spec.md)
-- [ ] Add notes/annotations field to bookmarks (spec: mvp-spec.md)
+- [x] Implement keyboard shortcuts system (spec: mvp-spec.md)
+- [x] Add bulk selection UI (checkboxes on bookmarks) (spec: mvp-spec.md)
+- [x] Implement bulk tag operations (spec: mvp-spec.md)
+- [x] Implement bulk move to folder (spec: mvp-spec.md)
+- [x] Implement bulk delete with confirmation (spec: mvp-spec.md)
+- [x] Add notes/annotations field to bookmarks (spec: mvp-spec.md)
 
 ### Phase 8: PWA & Deployment
 
-- [ ] Create PWA manifest.json with icons (spec: mvp-spec.md)
-- [ ] Implement service worker for offline support (spec: mvp-spec.md)
-- [ ] Create Netlify Function for metadata fetching (spec: mvp-spec.md)
-- [ ] Configure netlify.toml for deployment (spec: mvp-spec.md)
-- [ ] Generate bookmarklet code (spec: mvp-spec.md)
-- [ ] Add Open Graph image extraction (spec: mvp-spec.md)
-- [ ] Test PWA install and offline functionality (spec: mvp-spec.md)
+- [x] Create PWA manifest.json with icons (spec: mvp-spec.md)
+- [x] Implement service worker for offline support (spec: mvp-spec.md)
+- [x] Create Netlify Function for metadata fetching (spec: mvp-spec.md)
+- [x] Configure netlify.toml for deployment (spec: mvp-spec.md)
+- [x] Generate bookmarklet code (spec: mvp-spec.md)
+- [x] Add Open Graph image extraction (spec: mvp-spec.md)
+- [x] Test PWA install and offline functionality (spec: mvp-spec.md)
 
 ## Completed
 

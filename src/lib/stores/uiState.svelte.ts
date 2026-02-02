@@ -44,6 +44,8 @@ export interface UIState {
 	selectedTagIds: string[];
 	/** Theme mode preference */
 	themeMode: ThemeMode;
+	/** Selected bookmark IDs for bulk operations */
+	selectedBookmarkIds: string[];
 }
 
 /**
@@ -56,7 +58,8 @@ const DEFAULT_STATE: UIState = {
 	dateRange: 'all',
 	selectedFolderId: null,
 	selectedTagIds: [],
-	themeMode: 'system'
+	themeMode: 'system',
+	selectedBookmarkIds: []
 };
 
 /**
@@ -183,6 +186,45 @@ function createUIStateStore() {
 	}
 
 	/**
+	 * Toggle bookmark selection
+	 */
+	function toggleBookmarkSelection(bookmarkId: string): void {
+		if (state.selectedBookmarkIds.includes(bookmarkId)) {
+			state.selectedBookmarkIds = state.selectedBookmarkIds.filter((id) => id !== bookmarkId);
+		} else {
+			state.selectedBookmarkIds = [...state.selectedBookmarkIds, bookmarkId];
+		}
+	}
+
+	/**
+	 * Select multiple bookmarks
+	 */
+	function selectBookmarks(bookmarkIds: string[]): void {
+		state.selectedBookmarkIds = [...bookmarkIds];
+	}
+
+	/**
+	 * Clear all bookmark selections
+	 */
+	function clearSelection(): void {
+		state.selectedBookmarkIds = [];
+	}
+
+	/**
+	 * Select all bookmarks from a list
+	 */
+	function selectAll(bookmarkIds: string[]): void {
+		state.selectedBookmarkIds = [...bookmarkIds];
+	}
+
+	/**
+	 * Check if a bookmark is selected
+	 */
+	function isBookmarkSelected(bookmarkId: string): boolean {
+		return state.selectedBookmarkIds.includes(bookmarkId);
+	}
+
+	/**
 	 * Reset all UI state to defaults
 	 */
 	function reset(): void {
@@ -279,6 +321,9 @@ function createUIStateStore() {
 		get themeMode() {
 			return state.themeMode;
 		},
+		get selectedBookmarkIds() {
+			return state.selectedBookmarkIds;
+		},
 		setViewMode,
 		setSearchQuery,
 		setSortBy,
@@ -293,7 +338,12 @@ function createUIStateStore() {
 		hasActiveFilters,
 		setThemeMode,
 		getEffectiveTheme,
-		initTheme
+		initTheme,
+		toggleBookmarkSelection,
+		selectBookmarks,
+		clearSelection,
+		selectAll,
+		isBookmarkSelected
 	};
 }
 

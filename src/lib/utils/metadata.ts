@@ -6,6 +6,7 @@ export interface PageMetadata {
 	title: string;
 	description?: string;
 	faviconUrl?: string;
+	ogImage?: string;
 }
 
 /**
@@ -23,37 +24,28 @@ export function getFaviconUrl(url: string): string {
 }
 
 /**
- * Fetches page metadata (title, description, favicon) from a URL
- * Note: This function requires CORS to be enabled on the target server.
- * For production use, consider implementing a backend proxy (e.g., Netlify Function)
- * to avoid CORS restrictions.
+ * Fetches page metadata via Netlify Function (production) or direct fetch (development)
+ * Uses a serverless function as a proxy to avoid CORS restrictions.
  *
  * @param url - The URL to fetch metadata from
+ * @param useNetlifyFunction - Whether to use Netlify Function proxy (default: auto-detect)
  * @returns Promise resolving to page metadata
  */
-export async function fetchPageMetadata(url: string): Promise<PageMetadata> {
+export async function fetchPageMetadata(
+	url: string,
+	useNetlifyFunction: boolean = isProductionEnvironment()
+): Promise<PageMetadata> {
 	try {
 		// Validate URL first
 		new URL(url);
 
-		// Attempt to fetch the page with CORS mode
-		// Note: This will fail for most external sites due to CORS restrictions
-		const response = await fetch(url, {
-			method: 'GET',
-			mode: 'cors',
-			signal: AbortSignal.timeout(5000) // 5 second timeout
-		});
-
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}`);
+		if (useNetlifyFunction) {
+			// Use Netlify Function for production to avoid CORS issues
+			return await fetchViaNetlifyFunction(url);
+		} else {
+			// Direct fetch for development (will fail for most sites due to CORS)
+			return await fetchDirectly(url);
 		}
-
-		const html = await response.text();
-
-		// Extract metadata from HTML
-		const metadata = extractMetadataFromHtml(html, url);
-
-		return metadata;
 	} catch (error) {
 		// If fetch fails (likely due to CORS), return basic metadata
 		console.warn(`Failed to fetch metadata for ${url}:`, error);
@@ -65,6 +57,70 @@ export async function fetchPageMetadata(url: string): Promise<PageMetadata> {
 			faviconUrl: getFaviconUrl(url)
 		};
 	}
+}
+
+/**
+ * Determines if running in production environment
+ * @returns true if in production, false otherwise
+ */
+function isProductionEnvironment(): boolean {
+	// Check if running in browser
+	if (typeof window !== 'undefined') {
+		// In production on Netlify, the URL will be on the production domain
+		return (
+			window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1')
+		);
+	}
+	// For SSR or build time, default to false
+	return false;
+}
+
+/**
+ * Fetches metadata via Netlify Function
+ * @param url - The URL to fetch metadata from
+ * @returns Promise resolving to page metadata
+ */
+async function fetchViaNetlifyFunction(url: string): Promise<PageMetadata> {
+	const functionUrl = `/.netlify/functions/fetch-metadata?url=${encodeURIComponent(url)}`;
+
+	const response = await fetch(functionUrl, {
+		method: 'GET',
+		signal: AbortSignal.timeout(15000) // 15 second timeout (function has 10s timeout + buffer)
+	});
+
+	if (!response.ok) {
+		throw new Error(`HTTP ${response.status}`);
+	}
+
+	const metadata = await response.json();
+	return metadata;
+}
+
+/**
+ * Fetches metadata directly from URL (development only)
+ * Note: This will fail for most external sites due to CORS restrictions
+ * @param url - The URL to fetch metadata from
+ * @returns Promise resolving to page metadata
+ */
+async function fetchDirectly(url: string): Promise<PageMetadata> {
+	// Attempt to fetch the page with CORS mode
+	// Note: This will fail for most external sites due to CORS restrictions
+	const response = await fetch(url, {
+		method: 'GET',
+		mode: 'cors',
+		signal: AbortSignal.timeout(5000) // 5 second timeout
+	});
+
+	if (!response.ok) {
+		throw new Error(`HTTP ${response.status}`);
+	}
+
+	const html = await response.text();
+
+	// Extract metadata from HTML
+	const metadata = extractMetadataFromHtml(html, url);
+
+	return metadata;
 }
 
 /**
@@ -95,6 +151,12 @@ export function extractMetadataFromHtml(html: string, url: string): PageMetadata
 		doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content') ||
 		undefined;
 
+	// Extract Open Graph image (prioritize og:image, then twitter:image)
+	const ogImage =
+		doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
+		doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
+		undefined;
+
 	// Extract favicon URL
 	// Priority: icon with type="image/x-icon", shortcut icon, icon, apple-touch-icon
 	const linkIcon =
@@ -103,13 +165,15 @@ export function extractMetadataFromHtml(html: string, url: string): PageMetadata
 		doc.querySelector('link[rel~="icon"]')?.getAttribute('href') ||
 		doc.querySelector('link[rel~="apple-touch-icon"]')?.getAttribute('href');
 
-	// Convert relative favicon URLs to absolute
+	// Convert relative URLs to absolute
 	const faviconUrl = linkIcon ? resolveUrl(linkIcon, url) : getFaviconUrl(url);
+	const resolvedOgImage = ogImage ? resolveUrl(ogImage, url) : undefined;
 
 	return {
 		title,
 		description: description?.trim() || undefined,
-		faviconUrl
+		faviconUrl,
+		ogImage: resolvedOgImage
 	};
 }
 

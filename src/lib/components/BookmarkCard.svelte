@@ -1,19 +1,25 @@
 <script lang="ts">
 	import type { Bookmark } from '$lib/types';
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
+	import { uiStateStore } from '$lib/stores/uiState.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
+	import { highlightText } from '$lib/utils/highlight';
 
 	interface Props {
 		bookmark: Bookmark;
+		searchQuery?: string;
 	}
 
-	let { bookmark }: Props = $props();
+	let { bookmark, searchQuery = '' }: Props = $props();
+
+	let isSelected = $derived(uiStateStore.isBookmarkSelected(bookmark.id));
 
 	let isEditing = $state(false);
 	let showDeleteConfirm = $state(false);
 	let editedTitle = $state(bookmark.title);
 	let editedUrl = $state(bookmark.url);
 	let editedDescription = $state(bookmark.description || '');
+	let editedNotes = $state(bookmark.notes || '');
 
 	/**
 	 * Enter edit mode
@@ -23,6 +29,7 @@
 		editedTitle = bookmark.title;
 		editedUrl = bookmark.url;
 		editedDescription = bookmark.description || '';
+		editedNotes = bookmark.notes || '';
 	}
 
 	/**
@@ -33,6 +40,7 @@
 		editedTitle = bookmark.title;
 		editedUrl = bookmark.url;
 		editedDescription = bookmark.description || '';
+		editedNotes = bookmark.notes || '';
 	}
 
 	/**
@@ -48,6 +56,7 @@
 			title: editedTitle.trim(),
 			url: editedUrl.trim(),
 			description: editedDescription.trim() || undefined,
+			notes: editedNotes.trim() || undefined,
 			updatedAt: Date.now()
 		};
 
@@ -98,11 +107,32 @@
 			return url;
 		}
 	}
+
+	/**
+	 * Toggle bookmark selection
+	 */
+	function toggleSelection(e: Event) {
+		e.preventDefault();
+		uiStateStore.toggleBookmarkSelection(bookmark.id);
+	}
 </script>
 
 <div
-	class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow"
+	class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow relative"
+	class:ring-2={isSelected}
+	class:ring-blue-500={isSelected}
 >
+	<!-- Selection Checkbox -->
+	<div class="absolute top-2 left-2">
+		<input
+			type="checkbox"
+			checked={isSelected}
+			onchange={toggleSelection}
+			class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+			aria-label="Select bookmark"
+		/>
+	</div>
+
 	{#if isEditing}
 		<!-- Edit Mode -->
 		<form
@@ -110,7 +140,7 @@
 				e.preventDefault();
 				saveEdit();
 			}}
-			class="space-y-3"
+			class="space-y-3 pl-6"
 		>
 			<!-- Title Input -->
 			<div>
@@ -150,6 +180,18 @@
 				></textarea>
 			</div>
 
+			<!-- Notes Input -->
+			<div>
+				<label for="edit-notes-{bookmark.id}" class="sr-only">Notes</label>
+				<textarea
+					id="edit-notes-{bookmark.id}"
+					bind:value={editedNotes}
+					class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+					placeholder="Notes (optional)"
+					rows="2"
+				></textarea>
+			</div>
+
 			<!-- Edit Actions -->
 			<div class="flex gap-2 justify-end">
 				<button
@@ -169,7 +211,22 @@
 		</form>
 	{:else}
 		<!-- Display Mode -->
-		<div class="space-y-2">
+		<div class="space-y-2 pl-6">
+			<!-- Open Graph Image Preview -->
+			{#if bookmark.ogImage}
+				<div class="mb-3 -mx-4 -mt-4 overflow-hidden rounded-t-lg">
+					<img
+						src={bookmark.ogImage}
+						alt=""
+						class="w-full h-48 object-cover"
+						onerror={(e) => {
+							const target = e.currentTarget as HTMLImageElement;
+							target.style.display = 'none';
+						}}
+					/>
+				</div>
+			{/if}
+
 			<!-- Title and Actions Header -->
 			<div class="flex items-start justify-between gap-2">
 				<a
@@ -178,7 +235,8 @@
 					rel="noopener noreferrer"
 					class="font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-1 truncate"
 				>
-					{bookmark.title}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html highlightText(bookmark.title, searchQuery)}
 				</a>
 
 				<!-- Action Buttons -->
@@ -224,14 +282,29 @@
 				class="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 truncate block transition-colors"
 				title={bookmark.url}
 			>
-				{getDomain(bookmark.url)}
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html highlightText(getDomain(bookmark.url), searchQuery)}
 			</a>
 
 			<!-- Description -->
 			{#if bookmark.description}
 				<p class="text-sm text-gray-500 dark:text-gray-500 line-clamp-2">
-					{bookmark.description}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html highlightText(bookmark.description, searchQuery)}
 				</p>
+			{/if}
+
+			<!-- Notes -->
+			{#if bookmark.notes}
+				<div
+					class="text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1.5 border-l-2 border-amber-400 dark:border-amber-600"
+				>
+					<div class="font-medium text-xs text-amber-600 dark:text-amber-500 mb-0.5">Notes:</div>
+					<p class="line-clamp-2">
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+						{@html highlightText(bookmark.notes, searchQuery)}
+					</p>
+				</div>
 			{/if}
 
 			<!-- Metadata Footer -->
