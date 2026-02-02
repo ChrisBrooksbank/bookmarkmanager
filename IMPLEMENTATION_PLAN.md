@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 5
+- Build iterations: 6
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -39,7 +39,7 @@
 
 ### Phase 2: Core Styling Setup
 
-- [ ] Configure Tailwind CSS with dark mode support (spec: mvp-spec.md)
+- [x] Configure Tailwind CSS with dark mode support (spec: mvp-spec.md)
 - [ ] Create base layout with sidebar and main content area (spec: mvp-spec.md)
 - [ ] Implement dark mode toggle with system preference detection (spec: mvp-spec.md)
 

@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+
+@source './**/*.{html,js,svelte,ts}';
+
+/* Dark mode is supported via the 'dark' variant (class-based) */
