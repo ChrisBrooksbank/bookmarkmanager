@@ -30,7 +30,7 @@
 
 ### Phase 1: Foundation (Data Layer)
 
-- [ ] Create TypeScript type definitions for Bookmark, Folder, Tag (spec: bookmark-crud.md, organization.md)
+- [x] Create TypeScript type definitions for Bookmark, Folder, Tag (spec: bookmark-crud.md, organization.md)
 - [ ] Implement IndexedDB wrapper with schema and CRUD operations (spec: bookmark-crud.md)
 - [ ] Create bookmarks Svelte store with localStorage fallback (spec: bookmark-crud.md)
 - [ ] Create folders Svelte store with nested hierarchy support (spec: organization.md)
