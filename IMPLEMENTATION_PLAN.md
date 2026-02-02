@@ -58,7 +58,7 @@
 - [x] Build FolderTree component with nested folder display (spec: organization.md)
 - [x] Implement create/rename/delete folder operations (spec: organization.md)
 - [x] Add folder assignment to bookmark form (spec: organization.md)
-- [ ] Build TagCloud/TagList component (spec: organization.md)
+- [x] Build TagCloud/TagList component (spec: organization.md)
 - [ ] Implement tag creation and assignment in bookmark form (spec: organization.md)
 - [ ] Add tag filtering UI (spec: organization.md)
 - [ ] Implement folder filtering (show bookmarks by folder) (spec: organization.md)
