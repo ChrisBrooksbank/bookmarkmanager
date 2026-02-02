@@ -20,6 +20,16 @@ export type ShortcutHandler = (event: KeyboardEvent) => void;
  */
 export function createShortcutHandler(shortcuts: KeyboardShortcut[]): ShortcutHandler {
 	return (event: KeyboardEvent) => {
+		// Don't intercept shortcuts when user is in an input field
+		const activeElement = document.activeElement;
+		const isInInput =
+			activeElement instanceof HTMLInputElement ||
+			activeElement instanceof HTMLTextAreaElement ||
+			activeElement?.getAttribute('contenteditable') === 'true';
+		if (isInInput) {
+			return;
+		}
+
 		for (const shortcut of shortcuts) {
 			// Check if the key matches
 			if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) {
@@ -83,7 +93,6 @@ export function formatShortcut(shortcut: Omit<KeyboardShortcut, 'action' | 'desc
 export const SHORTCUT_KEYS = {
 	// Navigation & UI
 	SEARCH: 'k',
-	TOGGLE_VIEW: 'v',
 	TOGGLE_SIDEBAR: 'b',
 	ADD_BOOKMARK: 'n',
 
@@ -102,7 +111,6 @@ export const SHORTCUT_KEYS = {
  */
 export function getDefaultShortcuts(actions: {
 	onSearch?: () => void;
-	onToggleView?: () => void;
 	onToggleSidebar?: () => void;
 	onAddBookmark?: () => void;
 	onSelectAll?: () => void;
@@ -119,16 +127,6 @@ export function getDefaultShortcuts(actions: {
 			meta: true,
 			description: 'Focus search',
 			action: actions.onSearch
-		});
-	}
-
-	if (actions.onToggleView) {
-		shortcuts.push({
-			key: SHORTCUT_KEYS.TOGGLE_VIEW,
-			ctrl: true,
-			meta: true,
-			description: 'Toggle view mode',
-			action: actions.onToggleView
 		});
 	}
 

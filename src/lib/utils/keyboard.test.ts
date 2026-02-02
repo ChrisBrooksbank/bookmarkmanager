@@ -382,11 +382,11 @@ describe('keyboard utilities', () => {
 
 		it('should include descriptions for all shortcuts', () => {
 			const onSearch = vi.fn();
-			const onToggleView = vi.fn();
+			const onToggleSidebar = vi.fn();
 
 			const shortcuts = getDefaultShortcuts({
 				onSearch,
-				onToggleView
+				onToggleSidebar
 			});
 
 			expect(shortcuts.every((s) => s.description.length > 0)).toBe(true);
@@ -407,7 +407,6 @@ describe('keyboard utilities', () => {
 		it('should create all shortcuts when all actions are provided', () => {
 			const shortcuts = getDefaultShortcuts({
 				onSearch: vi.fn(),
-				onToggleView: vi.fn(),
 				onToggleSidebar: vi.fn(),
 				onAddBookmark: vi.fn(),
 				onSelectAll: vi.fn(),
@@ -416,7 +415,7 @@ describe('keyboard utilities', () => {
 				onListView: vi.fn()
 			});
 
-			expect(shortcuts).toHaveLength(8);
+			expect(shortcuts).toHaveLength(7);
 		});
 
 		it('should execute the correct action when triggered', () => {
@@ -440,7 +439,6 @@ describe('keyboard utilities', () => {
 	describe('SHORTCUT_KEYS', () => {
 		it('should define all standard shortcut keys', () => {
 			expect(SHORTCUT_KEYS.SEARCH).toBe('k');
-			expect(SHORTCUT_KEYS.TOGGLE_VIEW).toBe('v');
 			expect(SHORTCUT_KEYS.TOGGLE_SIDEBAR).toBe('b');
 			expect(SHORTCUT_KEYS.ADD_BOOKMARK).toBe('n');
 			expect(SHORTCUT_KEYS.SELECT_ALL).toBe('a');

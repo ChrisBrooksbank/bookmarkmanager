@@ -47,6 +47,7 @@
 	onMount(() => {
 		foldersStore.load();
 		tagsStore.load();
+		bookmarksStore.load();
 		uiStateStore.initTheme();
 
 		// Check for URL parameters (from bookmarklet)
@@ -109,14 +110,6 @@
 	}
 
 	/**
-	 * Toggle between grid and list view
-	 */
-	function toggleViewMode() {
-		const newMode = uiStateStore.viewMode === 'grid' ? 'list' : 'grid';
-		uiStateStore.setViewMode(newMode);
-	}
-
-	/**
 	 * Initialize keyboard shortcuts using $effect
 	 */
 	$effect(() => {
@@ -124,7 +117,6 @@
 
 		const shortcuts = getDefaultShortcuts({
 			onSearch: focusSearch,
-			onToggleView: toggleViewMode,
 			onToggleSidebar: toggleSidebar,
 			onAddBookmark: openAddBookmarkModal,
 			onGridView: () => uiStateStore.setViewMode('grid'),

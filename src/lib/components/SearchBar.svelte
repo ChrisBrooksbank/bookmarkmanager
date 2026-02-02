@@ -44,10 +44,23 @@
 	 * Handle keyboard shortcuts (Ctrl/Cmd + K)
 	 */
 	function handleGlobalKeydown(event: KeyboardEvent) {
-		// Ctrl/Cmd + K to focus search
+		// Don't intercept shortcuts when user is in an input field (except for search focus shortcut)
+		const activeElement = document.activeElement;
+		const isInInput =
+			activeElement instanceof HTMLInputElement ||
+			activeElement instanceof HTMLTextAreaElement ||
+			activeElement?.getAttribute('contenteditable') === 'true';
+
+		// Ctrl/Cmd + K to focus search (works even from input fields)
 		if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
 			event.preventDefault();
 			inputElement?.focus();
+			return;
+		}
+
+		// Don't process other shortcuts when in input fields
+		if (isInInput) {
+			return;
 		}
 
 		// Escape to clear search (when focused)
