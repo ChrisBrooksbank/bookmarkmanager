@@ -15,6 +15,7 @@
 	onMount(() => {
 		foldersStore.load();
 		tagsStore.load();
+		uiStateStore.initTheme();
 	});
 
 	function toggleSidebar() {
@@ -27,6 +28,13 @@
 
 	function toggleTag(tagId: string) {
 		uiStateStore.toggleSelectedTag(tagId);
+	}
+
+	function cycleTheme() {
+		const current = uiStateStore.themeMode;
+		const next: 'light' | 'dark' | 'system' =
+			current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
+		uiStateStore.setThemeMode(next);
 	}
 </script>
 
@@ -168,7 +176,7 @@
 					</h2>
 				</div>
 
-				<!-- View Mode Toggles -->
+				<!-- View Mode Toggles and Theme Toggle -->
 				<div class="flex items-center gap-2">
 					<button
 						onclick={() => uiStateStore.setViewMode('grid')}
@@ -191,6 +199,40 @@
 						<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
 							<path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z" />
 						</svg>
+					</button>
+					<div class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+					<button
+						onclick={cycleTheme}
+						class="p-2 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+						aria-label="Toggle theme (current: {uiStateStore.themeMode})"
+						title="Theme: {uiStateStore.themeMode}"
+					>
+						{#if uiStateStore.themeMode === 'light'}
+							<!-- Sun icon for light mode -->
+							<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+								<path
+									d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"
+								/>
+							</svg>
+						{:else if uiStateStore.themeMode === 'dark'}
+							<!-- Moon icon for dark mode -->
+							<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+								<path
+									fill-rule="evenodd"
+									d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{:else}
+							<!-- Computer/System icon for system mode -->
+							<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+								<path
+									fill-rule="evenodd"
+									d="M2 4.25A2.25 2.25 0 014.25 2h15.5A2.25 2.25 0 0122 4.25v11.5A2.25 2.25 0 0119.75 18h-5.738l.808 2.424a.75.75 0 01-.711.976H9.891a.75.75 0 01-.711-.976l.808-2.424H4.25A2.25 2.25 0 012 15.75V4.25zm2.25-.75a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h15.5a.75.75 0 00.75-.75V4.25a.75.75 0 00-.75-.75H4.25z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
 					</button>
 				</div>
 			</div>

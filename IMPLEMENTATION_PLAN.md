@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 7
+- Build iterations: 8
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -41,7 +41,7 @@
 
 - [x] Configure Tailwind CSS with dark mode support (spec: mvp-spec.md)
 - [x] Create base layout with sidebar and main content area (spec: mvp-spec.md)
-- [ ] Implement dark mode toggle with system preference detection (spec: mvp-spec.md)
+- [x] Implement dark mode toggle with system preference detection (spec: mvp-spec.md)
 
 ### Phase 3: Basic Bookmark CRUD
 

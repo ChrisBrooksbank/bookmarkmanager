@@ -22,6 +22,11 @@ export type SortBy = 'newest' | 'oldest' | 'alphabetical' | 'recently-updated';
 export type DateRange = 'all' | 'last-7-days' | 'last-30-days' | 'last-90-days';
 
 /**
+ * Theme mode options
+ */
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+/**
  * UI state interface
  */
 export interface UIState {
@@ -37,6 +42,8 @@ export interface UIState {
 	selectedFolderId: string | null;
 	/** Selected tag IDs for filtering */
 	selectedTagIds: string[];
+	/** Theme mode preference */
+	themeMode: ThemeMode;
 }
 
 /**
@@ -48,7 +55,8 @@ const DEFAULT_STATE: UIState = {
 	sortBy: 'newest',
 	dateRange: 'all',
 	selectedFolderId: null,
-	selectedTagIds: []
+	selectedTagIds: [],
+	themeMode: 'system'
 };
 
 /**
@@ -194,6 +202,61 @@ function createUIStateStore() {
 		);
 	}
 
+	/**
+	 * Set theme mode and apply to document
+	 */
+	function setThemeMode(mode: ThemeMode): void {
+		state.themeMode = mode;
+		saveToLocalStorage(state);
+		applyTheme();
+	}
+
+	/**
+	 * Apply the current theme to the document
+	 */
+	function applyTheme(): void {
+		if (typeof window === 'undefined') return;
+
+		const isDark =
+			state.themeMode === 'dark' ||
+			(state.themeMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+		if (isDark) {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	}
+
+	/**
+	 * Get the effective theme (resolved from system preference if needed)
+	 */
+	function getEffectiveTheme(): 'light' | 'dark' {
+		if (state.themeMode === 'system') {
+			return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+		return state.themeMode;
+	}
+
+	/**
+	 * Initialize theme on mount (call this from layout)
+	 */
+	function initTheme(): void {
+		if (typeof window === 'undefined') return;
+
+		// Apply theme immediately
+		applyTheme();
+
+		// Listen for system preference changes
+		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		const handleChange = () => {
+			if (state.themeMode === 'system') {
+				applyTheme();
+			}
+		};
+		mediaQuery.addEventListener('change', handleChange);
+	}
+
 	return {
 		get viewMode() {
 			return state.viewMode;
@@ -213,6 +276,9 @@ function createUIStateStore() {
 		get selectedTagIds() {
 			return state.selectedTagIds;
 		},
+		get themeMode() {
+			return state.themeMode;
+		},
 		setViewMode,
 		setSearchQuery,
 		setSortBy,
@@ -224,7 +290,10 @@ function createUIStateStore() {
 		toggleSelectedTag,
 		clearFilters,
 		reset,
-		hasActiveFilters
+		hasActiveFilters,
+		setThemeMode,
+		getEffectiveTheme,
+		initTheme
 	};
 }
 

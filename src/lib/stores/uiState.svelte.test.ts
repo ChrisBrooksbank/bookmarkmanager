@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { uiStateStore } from './uiState.svelte';
-import type { ViewMode, SortBy, DateRange } from './uiState.svelte';
+import type { ViewMode, SortBy, DateRange, ThemeMode } from './uiState.svelte';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -38,6 +38,7 @@ describe('uiStateStore', () => {
 			expect(uiStateStore.dateRange).toBe('all');
 			expect(uiStateStore.selectedFolderId).toBe(null);
 			expect(uiStateStore.selectedTagIds).toEqual([]);
+			expect(uiStateStore.themeMode).toBe('system');
 		});
 
 		it('should not have active filters by default', () => {
@@ -244,6 +245,7 @@ describe('uiStateStore', () => {
 			uiStateStore.setDateRange('last-7-days');
 			uiStateStore.setSelectedFolderId('folder-123');
 			uiStateStore.setSelectedTagIds(['tag-1']);
+			uiStateStore.setThemeMode('dark');
 
 			uiStateStore.reset();
 
@@ -253,6 +255,7 @@ describe('uiStateStore', () => {
 			expect(uiStateStore.dateRange).toBe('all');
 			expect(uiStateStore.selectedFolderId).toBe(null);
 			expect(uiStateStore.selectedTagIds).toEqual([]);
+			expect(uiStateStore.themeMode).toBe('system');
 		});
 
 		it('should persist default state to localStorage', () => {
@@ -327,6 +330,84 @@ describe('uiStateStore', () => {
 		it('should handle missing localStorage gracefully', () => {
 			// Even if localStorage is missing, the store should work
 			expect(() => uiStateStore.setViewMode('list')).not.toThrow();
+		});
+	});
+
+	describe('theme mode', () => {
+		// Mock matchMedia
+		const mockMatchMedia = (matches: boolean) => {
+			Object.defineProperty(window, 'matchMedia', {
+				writable: true,
+				value: vi.fn().mockImplementation((query) => ({
+					matches,
+					media: query,
+					onchange: null,
+					addListener: vi.fn(),
+					removeListener: vi.fn(),
+					addEventListener: vi.fn(),
+					removeEventListener: vi.fn(),
+					dispatchEvent: vi.fn()
+				}))
+			});
+		};
+
+		// Mock document.documentElement.classList
+		const mockClassList = () => {
+			const classList = {
+				add: vi.fn(),
+				remove: vi.fn(),
+				contains: vi.fn()
+			};
+			Object.defineProperty(document.documentElement, 'classList', {
+				writable: true,
+				value: classList
+			});
+			return classList;
+		};
+
+		beforeEach(() => {
+			mockMatchMedia(false);
+			mockClassList();
+		});
+
+		it('should initialize with system theme mode by default', () => {
+			expect(uiStateStore.themeMode).toBe('system');
+		});
+
+		it('should support all theme modes', () => {
+			const modes: ThemeMode[] = ['light', 'dark', 'system'];
+			modes.forEach((mode) => {
+				uiStateStore.setThemeMode(mode);
+				expect(uiStateStore.themeMode).toBe(mode);
+			});
+		});
+
+		it('should persist theme mode to localStorage', () => {
+			uiStateStore.setThemeMode('dark');
+			const stored = JSON.parse(localStorageMock.getItem('ui-state') || '{}');
+			expect(stored.themeMode).toBe('dark');
+		});
+
+		it('should get effective theme for light mode', () => {
+			uiStateStore.setThemeMode('light');
+			expect(uiStateStore.getEffectiveTheme()).toBe('light');
+		});
+
+		it('should get effective theme for dark mode', () => {
+			uiStateStore.setThemeMode('dark');
+			expect(uiStateStore.getEffectiveTheme()).toBe('dark');
+		});
+
+		it('should get effective theme for system mode (light)', () => {
+			mockMatchMedia(false); // System prefers light
+			uiStateStore.setThemeMode('system');
+			expect(uiStateStore.getEffectiveTheme()).toBe('light');
+		});
+
+		it('should get effective theme for system mode (dark)', () => {
+			mockMatchMedia(true); // System prefers dark
+			uiStateStore.setThemeMode('system');
+			expect(uiStateStore.getEffectiveTheme()).toBe('dark');
 		});
 	});
 });
