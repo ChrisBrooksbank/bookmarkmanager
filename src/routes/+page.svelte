@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
+	import BookmarkCard from '$lib/components/BookmarkCard.svelte';
 	import { onMount } from 'svelte';
 
 	onMount(() => {
@@ -25,21 +26,7 @@
 				: 'grid-cols-1'}"
 		>
 			{#each bookmarksStore.items as bookmark (bookmark.id)}
-				<div
-					class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow"
-				>
-					<h3 class="font-semibold text-gray-900 dark:text-white mb-2 truncate">
-						{bookmark.title}
-					</h3>
-					<p class="text-sm text-gray-600 dark:text-gray-400 truncate mb-2">
-						{bookmark.url}
-					</p>
-					{#if bookmark.description}
-						<p class="text-sm text-gray-500 dark:text-gray-500 line-clamp-2">
-							{bookmark.description}
-						</p>
-					{/if}
-				</div>
+				<BookmarkCard {bookmark} />
 			{/each}
 		</div>
 	{/if}

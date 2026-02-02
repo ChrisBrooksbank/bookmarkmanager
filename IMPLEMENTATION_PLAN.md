@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 9
+- Build iterations: 10
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -48,7 +48,7 @@
 - [x] Create add bookmark form with URL validation (spec: bookmark-crud.md)
 - [x] Implement URL validation utility (spec: bookmark-crud.md)
 - [x] Create metadata fetching utility (title, description, favicon) (spec: bookmark-crud.md)
-- [ ] Build BookmarkCard component with edit/delete actions (spec: bookmark-crud.md)
+- [x] Build BookmarkCard component with edit/delete actions (spec: bookmark-crud.md)
 - [ ] Build BookmarkList component (compact view) (spec: bookmark-crud.md)
 - [ ] Add delete confirmation modal (spec: bookmark-crud.md)
 - [ ] Implement inline editing for bookmarks (spec: bookmark-crud.md)
