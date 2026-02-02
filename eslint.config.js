@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import ts from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
+import globals from 'globals';
 
 export default ts.config(
 	js.configs.recommended,
@@ -11,7 +12,16 @@ export default ts.config(
 		languageOptions: {
 			parserOptions: {
 				parser: ts.parser
+			},
+			globals: {
+				...globals.browser
 			}
+		}
+	},
+	{
+		files: ['**/*.test.ts', '**/*.test.js'],
+		rules: {
+			'@typescript-eslint/no-explicit-any': 'off'
 		}
 	},
 	{

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import Modal from '$lib/components/Modal.svelte';
+	import AddBookmarkForm from '$lib/components/AddBookmarkForm.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
@@ -10,6 +12,9 @@
 
 	// Sidebar state
 	let sidebarOpen = $state(true);
+
+	// Modal state
+	let addBookmarkModalOpen = $state(false);
 
 	// Load stores on mount
 	onMount(() => {
@@ -35,6 +40,14 @@
 		const next: 'light' | 'dark' | 'system' =
 			current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
 		uiStateStore.setThemeMode(next);
+	}
+
+	function openAddBookmarkModal() {
+		addBookmarkModalOpen = true;
+	}
+
+	function closeAddBookmarkModal() {
+		addBookmarkModalOpen = false;
 	}
 </script>
 
@@ -127,6 +140,7 @@
 		<!-- Sidebar Footer -->
 		<div class="p-4 border-t border-gray-200 dark:border-gray-700">
 			<button
+				onclick={openAddBookmarkModal}
 				class="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
 			>
 				+ Add Bookmark
@@ -244,3 +258,8 @@
 		</div>
 	</main>
 </div>
+
+<!-- Add Bookmark Modal -->
+<Modal open={addBookmarkModalOpen} title="Add Bookmark" onClose={closeAddBookmarkModal}>
+	<AddBookmarkForm onClose={closeAddBookmarkModal} />
+</Modal>
