@@ -51,7 +51,7 @@
 - [x] Build BookmarkCard component with edit/delete actions (spec: bookmark-crud.md)
 - [x] Build BookmarkList component (compact view) (spec: bookmark-crud.md)
 - [x] Add delete confirmation modal (spec: bookmark-crud.md)
-- [ ] Implement inline editing for bookmarks (spec: bookmark-crud.md)
+- [x] Implement inline editing for bookmarks (spec: bookmark-crud.md)
 
 ### Phase 4: Organization Features
 
