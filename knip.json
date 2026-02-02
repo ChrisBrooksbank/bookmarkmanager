@@ -1,0 +1,7 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"entry": ["src/routes/**/*.{svelte,ts}", "src/lib/**/*.ts", "src/tests/**/*.{test,spec}.ts"],
+	"project": ["src/**/*.{svelte,ts}"],
+	"ignore": [".svelte-kit/**", "build/**"],
+	"ignoreDependencies": ["@testing-library/jest-dom", "@testing-library/svelte"]
+}

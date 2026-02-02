@@ -9,6 +9,7 @@
 ## Target User
 
 **Power users and researchers** who:
+
 - Save many bookmarks and need robust organization
 - Value keyboard efficiency and bulk operations
 - Want data ownership (local-first, no cloud dependency)
@@ -18,40 +19,45 @@
 
 ## Technical Decisions
 
-| Aspect | Decision |
-|--------|----------|
-| **Framework** | SvelteKit + TypeScript |
-| **Styling** | Tailwind CSS |
-| **Data Storage** | IndexedDB (local-first) |
-| **Hosting** | Netlify (static PWA) |
+| Aspect                | Decision                      |
+| --------------------- | ----------------------------- |
+| **Framework**         | SvelteKit + TypeScript        |
+| **Styling**           | Tailwind CSS                  |
+| **Data Storage**      | IndexedDB (local-first)       |
+| **Hosting**           | Netlify (static PWA)          |
 | **Metadata Fetching** | Netlify Function (serverless) |
-| **Theme** | Light + Dark mode |
+| **Theme**             | Light + Dark mode             |
 
 ---
 
 ## Core Features (MVP)
 
 ### Organization
+
 - **Folders**: Hierarchical collections for broad categories
 - **Tags**: Multiple tags per bookmark for cross-cutting topics
 - **Notes**: Quick annotations per bookmark for context
 
 ### Adding Bookmarks
+
 - **Manual entry**: Paste URL, auto-fetch title/description via metadata
 - **Bookmarklet**: One-click save from any page
 - **Browser import**: Upload Netscape HTML format (Chrome/Firefox/Edge/Safari)
 
 ### Search & Display
+
 - **Basic search**: Title, URL, description, tags
 - **Card grid view**: Visual thumbnails/favicons
 - **Compact list view**: Dense list for scanning
 - **View toggle**: Switch between layouts
 
 ### Data Portability
+
 - **Import**: Netscape HTML format
 - **Export**: HTML + JSON formats
 
 ### Power User Features
+
 - **Keyboard shortcuts**: Quick navigation and actions
 - **Bulk operations**: Multi-select to tag/move/delete
 - **Annotations**: Notes per bookmark
@@ -61,6 +67,7 @@
 ## Technical Considerations
 
 ### Screenshot Capture Challenge
+
 For a pure client-side PWA, capturing screenshots of external URLs is restricted by browser security (CORS). Options:
 
 1. **Defer to v2**: Use favicon + Open Graph images for MVP
@@ -73,30 +80,30 @@ For a pure client-side PWA, capturing screenshots of external URLs is restricted
 
 ```typescript
 interface Bookmark {
-  id: string;
-  url: string;
-  title: string;
-  description: string;
-  favicon: string;
-  ogImage?: string;
-  folderId: string | null;
-  tags: string[];
-  notes: string;
-  createdAt: Date;
-  updatedAt: Date;
+	id: string;
+	url: string;
+	title: string;
+	description: string;
+	favicon: string;
+	ogImage?: string;
+	folderId: string | null;
+	tags: string[];
+	notes: string;
+	createdAt: Date;
+	updatedAt: Date;
 }
 
 interface Folder {
-  id: string;
-  name: string;
-  parentId: string | null;
-  createdAt: Date;
+	id: string;
+	name: string;
+	parentId: string | null;
+	createdAt: Date;
 }
 
 interface Tag {
-  id: string;
-  name: string;
-  color?: string;
+	id: string;
+	name: string;
+	color?: string;
 }
 ```
 
@@ -153,6 +160,7 @@ bookmarkvault/
 ## MVP Scope Summary
 
 ### In Scope
+
 - Folder + tag organization
 - Manual add, bookmarklet, browser import
 - Basic search (title/URL/description/tags)
@@ -167,6 +175,7 @@ bookmarkvault/
 - Netlify Function for URL metadata fetching
 
 ### Out of Scope (v2+)
+
 - Screenshot capture (requires extension or service)
 - Full-text search (search within page content)
 - AI features (auto-tagging, semantic search)
@@ -179,17 +188,20 @@ bookmarkvault/
 ## Implementation Plan
 
 ### Phase 1: Project Setup
+
 1. Initialize SvelteKit project with TypeScript
 2. Configure Tailwind CSS
 3. Set up Netlify configuration
 4. Set up PWA manifest and service worker
 
 ### Phase 2: Core Data Layer
+
 1. Implement IndexedDB schema and CRUD operations
 2. Create Svelte stores for bookmarks, folders, tags
 3. Build import/export utilities (HTML + JSON)
 
 ### Phase 3: UI Components
+
 1. Build layout with sidebar (folders/tags) and main content area
 2. Implement BookmarkCard and BookmarkList components
 3. Add view toggle (grid/list)
@@ -198,6 +210,7 @@ bookmarkvault/
 6. Implement dark mode with system preference detection
 
 ### Phase 4: Features
+
 1. Manual bookmark entry with metadata fetching
 2. Netlify Function for URL metadata
 3. Bookmarklet generator
@@ -206,6 +219,7 @@ bookmarkvault/
 6. Notes/annotations per bookmark
 
 ### Phase 5: Polish & Deploy
+
 1. PWA configuration (manifest, service worker, icons)
 2. Cross-browser testing
 3. Netlify deployment

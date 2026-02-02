@@ -9,6 +9,7 @@ This document provides comprehensive research on the leading bookmark manager so
 ## Market Landscape & Key Trends
 
 ### User Pain Points (Priority Order)
+
 1. **Sync Failures** - The #1 reason users abandon bookmark managers
 2. **Poor Mobile Experience** - 60%+ of browsing now happens on mobile
 3. **Subscription Fatigue** - Users prefer free tiers with optional premium
@@ -16,6 +17,7 @@ This document provides comprehensive research on the leading bookmark manager so
 5. **Awareness Gap** - 41% of potential users don't understand the benefits
 
 ### Key Trends in 2025-2026
+
 - **AI Integration**: 47% of users favor AI-enhanced bookmark clustering
 - **Privacy Focus**: 24% of investment funding comes from cybersecurity investors
 - **Enterprise Adoption**: 55% of enterprises include bookmarking in their productivity stack
@@ -31,6 +33,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Feature-rich visual bookmark manager treating bookmarks as a searchable, taggable database rather than a folder hierarchy.
 
 **Key Features**:
+
 - Visual bookmarking with rich media cards and thumbnails
 - Full-text search across all saved content (including archived page content)
 - Nested collections and tag-based organization
@@ -69,6 +72,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Why It Mattered**: Pocket's closure displaced millions of users, creating significant market opportunity for alternatives. Former Pocket users are actively seeking replacements with similar simplicity.
 
 **Key Features It Had**:
+
 - Clean, distraction-free reading mode
 - Offline access
 - Content recommendations
@@ -76,6 +80,7 @@ This document provides comprehensive research on the leading bookmark manager so
 - Browser integration
 
 **Lessons Learned**:
+
 - Users valued its simplicity and ad-free experience
 - Integration with Firefox was a major adoption driver
 - Lacked power features (collaboration, advanced organization)
@@ -88,6 +93,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: The oldest read-it-later app, now positioned as the primary Pocket replacement.
 
 **Key Features**:
+
 - Distraction-free reading with customizable fonts, spacing, dark mode
 - Offline reading (up to 500 articles)
 - Highlighting and note-taking
@@ -126,6 +132,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Minimalist, no-frills bookmark manager for users who value speed, simplicity, and privacy.
 
 **Key Features**:
+
 - Lightning-fast tag-based organization
 - Full-text search of archived pages
 - Automatic page archiving
@@ -163,6 +170,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Research-focused bookmark manager with powerful annotation and collaboration tools, popular in academic settings.
 
 **Key Features**:
+
 - Web page highlighting and sticky notes (persistent across visits)
 - PDF annotation support
 - Group collaboration with shared bookmarks and notes
@@ -199,6 +207,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Dashboard-style bookmark manager that replaces your new tab page with a customizable homepage.
 
 **Key Features**:
+
 - Visual dashboard with widgets
 - RSS feed integration
 - Third-party integrations (Google Analytics, calendars)
@@ -236,6 +245,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Tab/session manager that replaces your new tab page, focused on managing active browser sessions.
 
 **Key Features**:
+
 - One-click save of all open tabs
 - Visual workspace in new tab page
 - Drag-and-drop organization
@@ -273,6 +283,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Premium read-it-later app built for power readers with deep integration into knowledge management systems.
 
 **Key Features**:
+
 - Unified inbox for articles, PDFs, EPUBs, newsletters, RSS
 - Multiple highlight colors with margin notes
 - Text-to-speech (human-like audio)
@@ -313,6 +324,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Modern, collaborative bookmark manager focused on web preservation with screenshot/PDF archiving.
 
 **Key Features**:
+
 - Auto-capture screenshot, PDF, and single HTML of each page
 - Internet Archive submission option
 - Collections, sub-collections, tags
@@ -351,6 +363,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Self-hostable Pocket alternative focused on read-later functionality with strong privacy.
 
 **Key Features**:
+
 - Save web pages for later reading
 - Clean reading view
 - Import from Pocket, Instapaper, Pinboard, browsers
@@ -389,6 +402,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Lightweight, single-binary bookmark manager written in Go, inspired by Pocket.
 
 **Key Features**:
+
 - Single binary deployment
 - CLI and web interface
 - Offline archive creation
@@ -426,6 +440,7 @@ This document provides comprehensive research on the leading bookmark manager so
 **Overview**: Minimal, fast, Docker-focused bookmark manager built with Django.
 
 **Key Features**:
+
 - Clean, fast UI
 - Powerful tag and bundle system
 - Browser extensions (Chrome, Firefox)
@@ -459,6 +474,7 @@ This document provides comprehensive research on the leading bookmark manager so
 ## Browser Built-In Bookmarks: Limitations
 
 ### Common Problems
+
 - **No cross-browser sync**: Tied to single browser ecosystem
 - **Limited organization**: Basic folders, no tags
 - **No search within pages**: Can't search bookmark content
@@ -473,42 +489,49 @@ This document provides comprehensive research on the leading bookmark manager so
 
 ## Feature Comparison Matrix
 
-| Feature | Raindrop | Instapaper | Pinboard | Diigo | Linkwarden | Wallabag | Shiori | Linkding |
-|---------|----------|------------|----------|-------|------------|----------|--------|----------|
-| **Free Tier** | Yes | Yes | No | Yes | Self-host | Self-host | Yes | Yes |
-| **Visual Previews** | Yes | No | No | No | Yes | No | No | No |
-| **Full-Text Search** | Pro | Premium | Paid | No | Yes | Yes | Yes | No |
-| **Offline Archives** | Yes | Yes | Paid | No | Yes | Yes | Yes | No |
-| **Annotations** | Yes | Yes | No | Yes | Yes | No | No | Yes |
-| **Collaboration** | Yes | No | No | Yes | Yes | No | No | No |
-| **Self-Hosted** | No | No | No | No | Yes | Yes | Yes | Yes |
-| **Mobile Apps** | Yes | Yes | No | Yes | PWA | Yes | No | No |
-| **AI Features** | Pro | No | No | No | Yes | No | No | No |
-| **API** | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Feature              | Raindrop | Instapaper | Pinboard | Diigo | Linkwarden | Wallabag  | Shiori | Linkding |
+| -------------------- | -------- | ---------- | -------- | ----- | ---------- | --------- | ------ | -------- |
+| **Free Tier**        | Yes      | Yes        | No       | Yes   | Self-host  | Self-host | Yes    | Yes      |
+| **Visual Previews**  | Yes      | No         | No       | No    | Yes        | No        | No     | No       |
+| **Full-Text Search** | Pro      | Premium    | Paid     | No    | Yes        | Yes       | Yes    | No       |
+| **Offline Archives** | Yes      | Yes        | Paid     | No    | Yes        | Yes       | Yes    | No       |
+| **Annotations**      | Yes      | Yes        | No       | Yes   | Yes        | No        | No     | Yes      |
+| **Collaboration**    | Yes      | No         | No       | Yes   | Yes        | No        | No     | No       |
+| **Self-Hosted**      | No       | No         | No       | No    | Yes        | Yes       | Yes    | Yes      |
+| **Mobile Apps**      | Yes      | Yes        | No       | Yes   | PWA        | Yes       | No     | No       |
+| **AI Features**      | Pro      | No         | No       | No    | Yes        | No        | No     | No       |
+| **API**              | Yes      | Yes        | Yes      | Yes   | Yes        | Yes       | Yes    | Yes      |
 
 ---
 
 ## Recommendations by Use Case
 
 ### For Casual Users
+
 **Raindrop.io (Free)** - Visual, easy to use, generous free tier
 
 ### For Serious Readers
+
 **Instapaper** or **Readwise Reader** - Focused reading experience with highlighting
 
 ### For Researchers/Academics
+
 **Diigo** - Best annotation and research collaboration tools
 
 ### For Developers/Minimalists
+
 **Pinboard** - Fast, reliable, API-friendly, privacy-focused
 
 ### For Privacy-Conscious Users
+
 **Wallabag** or **Linkwarden** (self-hosted) - Full data control
 
 ### For Teams
+
 **Raindrop.io Pro** or **Linkwarden** - Built-in collaboration features
 
 ### For PKM/Knowledge Workers
+
 **Readwise Reader** - Deep integration with Notion, Obsidian, etc.
 
 ---
@@ -516,6 +539,7 @@ This document provides comprehensive research on the leading bookmark manager so
 ## Key Insights for Building a New Bookmark Manager
 
 ### Must-Have Features (Table Stakes)
+
 1. **Reliable cross-platform sync** - The #1 user pain point
 2. **Mobile-first design** - 60%+ of browsing is mobile
 3. **Quick capture** - Browser extension with keyboard shortcuts
@@ -524,6 +548,7 @@ This document provides comprehensive research on the leading bookmark manager so
 6. **Import/Export** - Support standard formats (Netscape HTML, JSON)
 
 ### Differentiating Features (Pick Your Niche)
+
 1. **AI-powered organization** - Auto-tagging, smart search, summaries
 2. **Web archiving** - Screenshot/PDF/HTML preservation
 3. **Annotation tools** - Highlighting, notes, comments
@@ -534,6 +559,7 @@ This document provides comprehensive research on the leading bookmark manager so
 8. **Privacy/self-hosting** - Full data control
 
 ### Market Gaps to Consider
+
 1. **Pocket replacement** - Millions of displaced users seeking simple read-later
 2. **AI-first organization** - Most AI features are paywalled
 3. **Privacy + usability** - Self-hosted options often lack polish
@@ -545,12 +571,14 @@ This document provides comprehensive research on the leading bookmark manager so
 ## Sources
 
 ### General Comparisons
+
 - [SaaSWorthy: 20 Best Bookmark Managers for 2026](https://www.saasworthy.com/list/bookmark-managers)
 - [Bookmarkify: Best Bookmark Manager for Chrome](https://www.bookmarkify.io/blog/best-bookmark-manager)
 - [Marqly: Top 5 Bookmark Managers in 2025](https://www.marqly.com/blog/top-5-bookmark-managers-in-2025)
 - [Bookmarkee: Best Bookmark Managers in 2025](https://www.bookmarkee.com/blog/best-bookmark-managers/)
 
 ### Individual Solutions
+
 - [Raindrop.io G2 Reviews](https://www.g2.com/products/raindrop-io/reviews)
 - [XDA: Raindrop.io Productivity Review](https://www.xda-developers.com/raindropio-productivity-hack/)
 - [Zapier: 4 Best Read-It-Later Apps in 2025](https://zapier.com/blog/best-bookmaking-read-it-later-app/)
@@ -566,6 +594,7 @@ This document provides comprehensive research on the leading bookmark manager so
 - [Linkding GitHub](https://github.com/sissbruecker/linkding)
 
 ### Market Research
+
 - [TooManyAdapters: Pocket Replacement Apps](https://toomanyadapters.com/pocket-replacement-bookmarking-apps/)
 - [Market Research Intellect: Bookmark Manager Software Market](https://www.marketresearchintellect.com/product/global-bookmark-manager-software-market-size-and-forecast/)
 - [OpenPR: Bookmark Manager Software Market Growth](https://www.openpr.com/news/4233801/bookmark-manager-software-market-by-type-and-application-set)

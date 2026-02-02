@@ -10,23 +10,23 @@ This document captures the decisions made during the product discovery interview
 
 ## Interview Summary
 
-| Question | Decision | Rationale |
-|----------|----------|-----------|
-| **Target user** | Power users/researchers | Need robust organization and efficiency features |
-| **Platform** | Web app (PWA) | Works everywhere, easier to build, can add extension later |
-| **Hosting** | Netlify | Familiar platform, good PWA support, serverless functions |
-| **Data storage** | Local-first (IndexedDB) | No backend costs, full privacy, works offline |
-| **Organization** | Folders + tags | Best of both worlds - hierarchy and cross-cutting topics |
-| **Search** | Basic (title, URL, description, tags) | Keep MVP simple, full-text search in v2 |
-| **Archiving** | Favicon + OG images for MVP | Screenshot capture deferred to v2 (needs extension) |
-| **Adding bookmarks** | Manual + bookmarklet + browser import | Multiple methods for power user flexibility |
-| **Display style** | Card grid + compact list (toggle) | Visual when browsing, dense when searching |
-| **Import/export** | HTML (Netscape) + JSON | Browser compatibility + developer-friendly backup |
-| **Tech stack** | SvelteKit + TypeScript + Tailwind CSS | Fast, small bundles, good DX |
-| **Key features** | Keyboard shortcuts, bulk operations, annotations | Power user essentials |
-| **App name** | BookmarkVault | Emphasizes secure local storage |
-| **Dark mode** | Yes, in MVP | Important for researchers who read a lot |
-| **Metadata fetching** | Netlify Function (serverless) | Avoids CORS issues, stays on Netlify platform |
+| Question              | Decision                                         | Rationale                                                  |
+| --------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| **Target user**       | Power users/researchers                          | Need robust organization and efficiency features           |
+| **Platform**          | Web app (PWA)                                    | Works everywhere, easier to build, can add extension later |
+| **Hosting**           | Netlify                                          | Familiar platform, good PWA support, serverless functions  |
+| **Data storage**      | Local-first (IndexedDB)                          | No backend costs, full privacy, works offline              |
+| **Organization**      | Folders + tags                                   | Best of both worlds - hierarchy and cross-cutting topics   |
+| **Search**            | Basic (title, URL, description, tags)            | Keep MVP simple, full-text search in v2                    |
+| **Archiving**         | Favicon + OG images for MVP                      | Screenshot capture deferred to v2 (needs extension)        |
+| **Adding bookmarks**  | Manual + bookmarklet + browser import            | Multiple methods for power user flexibility                |
+| **Display style**     | Card grid + compact list (toggle)                | Visual when browsing, dense when searching                 |
+| **Import/export**     | HTML (Netscape) + JSON                           | Browser compatibility + developer-friendly backup          |
+| **Tech stack**        | SvelteKit + TypeScript + Tailwind CSS            | Fast, small bundles, good DX                               |
+| **Key features**      | Keyboard shortcuts, bulk operations, annotations | Power user essentials                                      |
+| **App name**          | BookmarkVault                                    | Emphasizes secure local storage                            |
+| **Dark mode**         | Yes, in MVP                                      | Important for researchers who read a lot                   |
+| **Metadata fetching** | Netlify Function (serverless)                    | Avoids CORS issues, stays on Netlify platform              |
 
 ---
 
@@ -35,6 +35,7 @@ This document captures the decisions made during the product discovery interview
 ### Target Audience: Power Users & Researchers
 
 Selected over:
+
 - Myself (personal tool)
 - Casual users
 - Teams/enterprise
@@ -44,6 +45,7 @@ Selected over:
 ### Platform: Web App (PWA)
 
 Selected over:
+
 - Browser extension only
 - Desktop app
 - Web app + extension combo
@@ -53,10 +55,12 @@ Selected over:
 ### Data Storage: Local-First (IndexedDB)
 
 Selected over:
+
 - Cloud database (Supabase/Firebase)
 - Local-first + optional sync
 
 **Implications**:
+
 - No backend infrastructure needed
 - Full data ownership and privacy
 - Works offline by default
@@ -66,6 +70,7 @@ Selected over:
 ### Organization: Folders + Tags
 
 Selected over:
+
 - Tags only
 - Folders only
 - Smart collections
@@ -75,6 +80,7 @@ Selected over:
 ### Search: Basic Search
 
 Selected over:
+
 - Full-text search (within page content)
 - Semantic/AI search
 
@@ -90,6 +96,7 @@ Originally wanted screenshot capture, but deferred due to CORS limitations in pu
 ### Display: Dual View (Card Grid + List)
 
 Selected over:
+
 - Card grid only
 - Compact list only
 
@@ -98,21 +105,25 @@ Selected over:
 ### Import/Export: HTML + JSON
 
 Selected over:
+
 - Browser HTML only
 - Multiple third-party formats
 
 **Implications**:
+
 - Support Netscape HTML format (universal browser compatibility)
 - JSON format for full backup/restore and developer use
 
 ### Tech Stack: SvelteKit + TypeScript + Tailwind
 
 Selected over:
+
 - React + TypeScript
 - Vue + TypeScript
 - Vanilla JS/Web Components
 
 **Implications**:
+
 - SvelteKit for routing and SSG
 - TypeScript for type safety
 - Tailwind for rapid styling
@@ -121,11 +132,13 @@ Selected over:
 ### Must-Have Features (MVP)
 
 Selected features:
+
 - Keyboard shortcuts
 - Bulk operations (multi-select)
 - Quick notes/annotations
 
 Not selected for MVP:
+
 - Dark mode (later added back in)
 
 ### Dark Mode: Included in MVP
@@ -137,6 +150,7 @@ Changed from "defer to v2" based on importance for researchers who read extensiv
 ### Metadata Fetching: Netlify Function
 
 Selected over:
+
 - CORS proxy service (external dependency)
 - Manual entry only (poor UX)
 
@@ -156,6 +170,7 @@ Based on research in `docs/research/bookmark-manager-research.md`:
 ### Competitive Positioning
 
 BookmarkVault targets the intersection of:
+
 - **Pinboard**: Minimalist, privacy-focused, developer-friendly
 - **Raindrop.io**: Visual organization, power features
 - **Self-hosted solutions**: Data ownership, no subscription
