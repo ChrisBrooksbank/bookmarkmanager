@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 13
+- Build iterations: 14
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -57,7 +57,7 @@
 
 - [x] Build FolderTree component with nested folder display (spec: organization.md)
 - [x] Implement create/rename/delete folder operations (spec: organization.md)
-- [ ] Add folder assignment to bookmark form (spec: organization.md)
+- [x] Add folder assignment to bookmark form (spec: organization.md)
 - [ ] Build TagCloud/TagList component (spec: organization.md)
 - [ ] Implement tag creation and assignment in bookmark form (spec: organization.md)
 - [ ] Add tag filtering UI (spec: organization.md)

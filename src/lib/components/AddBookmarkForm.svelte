@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
+	import { foldersStore } from '$lib/stores/folders.svelte';
 	import { validateUrl as validateUrlUtil } from '$lib/utils/validation';
 	import type { Bookmark } from '$lib/types';
 
@@ -13,6 +14,7 @@
 	let url = $state('');
 	let title = $state('');
 	let description = $state('');
+	let folderId = $state<string | null>(null);
 	let submitting = $state(false);
 	let urlError = $state('');
 
@@ -42,6 +44,7 @@
 				url: url.trim(),
 				title: title.trim() || new URL(url.trim()).hostname,
 				description: description.trim() || undefined,
+				folderId: folderId || undefined,
 				tags: [],
 				createdAt: now,
 				updatedAt: now
@@ -53,6 +56,7 @@
 			url = '';
 			title = '';
 			description = '';
+			folderId = null;
 			urlError = '';
 
 			// Close modal if callback provided
@@ -147,6 +151,24 @@
 			class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none"
 			disabled={submitting}
 		></textarea>
+	</div>
+
+	<!-- Folder Selection -->
+	<div>
+		<label for="folder" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+			Folder (optional)
+		</label>
+		<select
+			id="folder"
+			bind:value={folderId}
+			class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+			disabled={submitting}
+		>
+			<option value={null}>No folder (root)</option>
+			{#each foldersStore.items as folder (folder.id)}
+				<option value={folder.id}>{folder.name}</option>
+			{/each}
+		</select>
 	</div>
 
 	<!-- Form Actions -->
