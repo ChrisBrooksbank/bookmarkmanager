@@ -3,6 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Modal from '$lib/components/Modal.svelte';
 	import AddBookmarkForm from '$lib/components/AddBookmarkForm.svelte';
+	import FolderTree from '$lib/components/FolderTree.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
@@ -15,6 +16,9 @@
 
 	// Modal state
 	let addBookmarkModalOpen = $state(false);
+
+	// Expanded folders state
+	let expandedFolders = $state<Set<string>>(new Set());
 
 	// Load stores on mount
 	onMount(() => {
@@ -33,6 +37,15 @@
 
 	function toggleTag(tagId: string) {
 		uiStateStore.toggleSelectedTag(tagId);
+	}
+
+	function toggleFolderExpand(folderId: string) {
+		if (expandedFolders.has(folderId)) {
+			expandedFolders.delete(folderId);
+		} else {
+			expandedFolders.add(folderId);
+		}
+		expandedFolders = expandedFolders;
 	}
 
 	function cycleTheme() {
@@ -84,24 +97,19 @@
 						📚 All Bookmarks
 					</button>
 
-					<!-- Folder List -->
+					<!-- Folder Tree -->
 					{#if foldersStore.loading}
 						<div class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2">Loading folders...</div>
 					{:else if foldersStore.items.length === 0}
 						<div class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2">No folders yet</div>
 					{:else}
-						{#each foldersStore.getRootFolders() as folder (folder.id)}
-							<button
-								onclick={() => selectFolder(folder.id)}
-								class="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors {uiStateStore.selectedFolderId ===
-								folder.id
-									? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-									: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}"
-							>
-								📁 {folder.name}
-							</button>
-							<!-- Nested folders (TODO: implement recursive component in Phase 4) -->
-						{/each}
+						<FolderTree
+							parentId={null}
+							selectedFolderId={uiStateStore.selectedFolderId}
+							onSelectFolder={selectFolder}
+							{expandedFolders}
+							onToggleExpand={toggleFolderExpand}
+						/>
 					{/if}
 				</nav>
 			</div>

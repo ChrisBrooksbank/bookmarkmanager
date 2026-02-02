@@ -55,7 +55,7 @@
 
 ### Phase 4: Organization Features
 
-- [ ] Build FolderTree component with nested folder display (spec: organization.md)
+- [x] Build FolderTree component with nested folder display (spec: organization.md)
 - [ ] Implement create/rename/delete folder operations (spec: organization.md)
 - [ ] Add folder assignment to bookmark form (spec: organization.md)
 - [ ] Build TagCloud/TagList component (spec: organization.md)
