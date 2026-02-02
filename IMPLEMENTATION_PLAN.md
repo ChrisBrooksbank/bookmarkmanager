@@ -47,7 +47,7 @@
 
 - [x] Create add bookmark form with URL validation (spec: bookmark-crud.md)
 - [x] Implement URL validation utility (spec: bookmark-crud.md)
-- [ ] Create metadata fetching utility (title, description, favicon) (spec: bookmark-crud.md)
+- [x] Create metadata fetching utility (title, description, favicon) (spec: bookmark-crud.md)
 - [ ] Build BookmarkCard component with edit/delete actions (spec: bookmark-crud.md)
 - [ ] Build BookmarkList component (compact view) (spec: bookmark-crud.md)
 - [ ] Add delete confirmation modal (spec: bookmark-crud.md)
