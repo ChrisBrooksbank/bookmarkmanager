@@ -3,11 +3,14 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Modal from '$lib/components/Modal.svelte';
 	import AddBookmarkForm from '$lib/components/AddBookmarkForm.svelte';
+	import FolderForm from '$lib/components/FolderForm.svelte';
 	import FolderTree from '$lib/components/FolderTree.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
+	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
 	import { onMount } from 'svelte';
+	import type { Folder } from '$lib/types';
 
 	let { children } = $props();
 
@@ -16,6 +19,13 @@
 
 	// Modal state
 	let addBookmarkModalOpen = $state(false);
+	let folderModalOpen = $state(false);
+	let deleteFolderModalOpen = $state(false);
+
+	// Folder operation state
+	let folderToEdit = $state<Folder | null>(null);
+	let folderToDelete = $state<Folder | null>(null);
+	let parentIdForNewFolder = $state<string | null>(null);
 
 	// Expanded folders state
 	let expandedFolders = $state<Set<string>>(new Set());
@@ -62,6 +72,81 @@
 	function closeAddBookmarkModal() {
 		addBookmarkModalOpen = false;
 	}
+
+	function openCreateFolderModal(parentId: string | null = null) {
+		folderToEdit = null;
+		parentIdForNewFolder = parentId;
+		folderModalOpen = true;
+	}
+
+	function openEditFolderModal(folder: Folder) {
+		folderToEdit = folder;
+		parentIdForNewFolder = null;
+		folderModalOpen = true;
+	}
+
+	function closeFolderModal() {
+		folderModalOpen = false;
+		folderToEdit = null;
+		parentIdForNewFolder = null;
+	}
+
+	function openDeleteFolderModal(folder: Folder) {
+		folderToDelete = folder;
+		deleteFolderModalOpen = true;
+	}
+
+	function closeDeleteFolderModal() {
+		deleteFolderModalOpen = false;
+		folderToDelete = null;
+	}
+
+	async function confirmDeleteFolder() {
+		if (!folderToDelete) return;
+
+		try {
+			// Move all bookmarks in this folder and descendant folders to root
+			const descendantIds = [
+				folderToDelete.id,
+				...foldersStore.getDescendants(folderToDelete.id).map((f) => f.id)
+			];
+
+			// Load bookmarks if not already loaded
+			if (bookmarksStore.items.length === 0) {
+				await bookmarksStore.load();
+			}
+
+			// Update bookmarks that are in the deleted folder or its descendants
+			const bookmarksToUpdate = bookmarksStore.items.filter(
+				(b) => b.folderId && descendantIds.includes(b.folderId)
+			);
+
+			for (const bookmark of bookmarksToUpdate) {
+				await bookmarksStore.update({
+					...bookmark,
+					folderId: null
+				});
+			}
+
+			// Delete all descendant folders first
+			const descendants = foldersStore.getDescendants(folderToDelete.id);
+			for (const descendant of descendants) {
+				await foldersStore.remove(descendant.id);
+			}
+
+			// Delete the folder itself
+			await foldersStore.remove(folderToDelete.id);
+
+			// If the deleted folder was selected, deselect it
+			if (uiStateStore.selectedFolderId === folderToDelete.id) {
+				uiStateStore.setSelectedFolderId(null);
+			}
+
+			closeDeleteFolderModal();
+		} catch (error) {
+			console.error('Failed to delete folder:', error);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -84,7 +169,24 @@
 		<div class="flex-1 overflow-y-auto p-4">
 			<!-- Folders Section -->
 			<div class="mb-6">
-				<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">FOLDERS</h2>
+				<div class="flex items-center justify-between mb-2">
+					<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400">FOLDERS</h2>
+					<button
+						onclick={() => openCreateFolderModal(null)}
+						class="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+						aria-label="Create folder"
+						title="Create folder"
+					>
+						<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+							<path
+								d="M12 4v16m8-8H4"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+							/>
+						</svg>
+					</button>
+				</div>
 				<nav class="space-y-1">
 					<!-- All Bookmarks -->
 					<button
@@ -109,6 +211,9 @@
 							onSelectFolder={selectFolder}
 							{expandedFolders}
 							onToggleExpand={toggleFolderExpand}
+							onEditFolder={openEditFolderModal}
+							onDeleteFolder={openDeleteFolderModal}
+							onCreateSubfolder={openCreateFolderModal}
 						/>
 					{/if}
 				</nav>
@@ -271,3 +376,82 @@
 <Modal open={addBookmarkModalOpen} title="Add Bookmark" onClose={closeAddBookmarkModal}>
 	<AddBookmarkForm onClose={closeAddBookmarkModal} />
 </Modal>
+
+<!-- Folder Create/Edit Modal -->
+<Modal
+	open={folderModalOpen}
+	title={folderToEdit ? 'Rename Folder' : 'Create Folder'}
+	onClose={closeFolderModal}
+>
+	<FolderForm folder={folderToEdit} parentId={parentIdForNewFolder} onClose={closeFolderModal} />
+</Modal>
+
+<!-- Delete Folder Confirmation Modal -->
+{#if deleteFolderModalOpen && folderToDelete}
+	<div
+		class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+		role="presentation"
+	>
+		<div
+			class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="delete-folder-title"
+		>
+			<!-- Modal Header -->
+			<div
+				class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
+			>
+				<h2 id="delete-folder-title" class="text-lg font-semibold text-gray-900 dark:text-white">
+					Delete Folder
+				</h2>
+				<button
+					onclick={closeDeleteFolderModal}
+					class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+					aria-label="Close modal"
+				>
+					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Modal Content -->
+			<div class="px-6 py-4">
+				<p class="text-gray-700 dark:text-gray-300 mb-4">
+					Are you sure you want to delete the folder "{folderToDelete.name}"?
+				</p>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+					{#if foldersStore.getChildren(folderToDelete.id).length > 0}
+						This folder and all its subfolders will be deleted. Bookmarks will be moved to "All
+						Bookmarks".
+					{:else}
+						Bookmarks in this folder will be moved to "All Bookmarks".
+					{/if}
+				</p>
+
+				<!-- Actions -->
+				<div class="flex gap-3 justify-end">
+					<button
+						type="button"
+						onclick={closeDeleteFolderModal}
+						class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						onclick={confirmDeleteFolder}
+						class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+					>
+						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import FolderTree from './FolderTree.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
+	import type { Folder } from '$lib/types';
 
 	interface Props {
 		/** Parent folder ID (null for root) */
@@ -13,6 +14,12 @@
 		expandedFolders?: Set<string>;
 		/** Callback to toggle folder expansion */
 		onToggleExpand?: (folderId: string) => void;
+		/** Callback when a folder edit is requested */
+		onEditFolder?: (folder: Folder) => void;
+		/** Callback when a folder delete is requested */
+		onDeleteFolder?: (folder: Folder) => void;
+		/** Callback when a subfolder creation is requested */
+		onCreateSubfolder?: (parentId: string) => void;
 	}
 
 	let {
@@ -20,7 +27,10 @@
 		selectedFolderId = null,
 		onSelectFolder,
 		expandedFolders = new Set(),
-		onToggleExpand
+		onToggleExpand,
+		onEditFolder,
+		onDeleteFolder,
+		onCreateSubfolder
 	}: Props = $props();
 
 	/**
@@ -48,12 +58,21 @@
 	function hasChildren(folderId: string): boolean {
 		return foldersStore.getChildren(folderId).length > 0;
 	}
+
+	/**
+	 * State to track which folder's actions are shown
+	 */
+	let hoveredFolderId = $state<string | null>(null);
 </script>
 
 {#each folders as folder (folder.id)}
-	<div>
+	<div
+		role="group"
+		onmouseenter={() => (hoveredFolderId = folder.id)}
+		onmouseleave={() => (hoveredFolderId = null)}
+	>
 		<!-- Folder Item -->
-		<div class="flex items-center">
+		<div class="flex items-center group">
 			<!-- Expand/Collapse Button (only if folder has children) -->
 			{#if hasChildren(folder.id)}
 				<button
@@ -84,6 +103,64 @@
 			>
 				📁 {folder.name}
 			</button>
+
+			<!-- Action Buttons (shown on hover) -->
+			{#if hoveredFolderId === folder.id}
+				<div class="flex items-center gap-1 ml-1">
+					<!-- Add Subfolder Button -->
+					{#if onCreateSubfolder}
+						<button
+							onclick={() => onCreateSubfolder?.(folder.id)}
+							class="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+							aria-label="Add subfolder"
+							title="Add subfolder"
+						>
+							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+								<path
+									d="M12 4v16m8-8H4"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+								/>
+							</svg>
+						</button>
+					{/if}
+
+					<!-- Edit Button -->
+					{#if onEditFolder}
+						<button
+							onclick={() => onEditFolder?.(folder)}
+							class="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+							aria-label="Rename folder"
+							title="Rename folder"
+						>
+							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+								<path
+									d="M16.862 3.487a2.25 2.25 0 113.182 3.182L7.5 19.213l-4.125.688.688-4.125L16.862 3.487z"
+								/>
+							</svg>
+						</button>
+					{/if}
+
+					<!-- Delete Button -->
+					{#if onDeleteFolder}
+						<button
+							onclick={() => onDeleteFolder?.(folder)}
+							class="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+							aria-label="Delete folder"
+							title="Delete folder"
+						>
+							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+								<path
+									fill-rule="evenodd"
+									d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<!-- Nested Children (recursive) -->
@@ -95,6 +172,9 @@
 					{onSelectFolder}
 					{expandedFolders}
 					{onToggleExpand}
+					{onEditFolder}
+					{onDeleteFolder}
+					{onCreateSubfolder}
 				/>
 			</div>
 		{/if}

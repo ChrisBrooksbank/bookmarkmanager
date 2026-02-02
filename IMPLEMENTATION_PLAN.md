@@ -3,7 +3,7 @@
 ## Status
 
 - Planning iterations: 1
-- Build iterations: 12
+- Build iterations: 13
 - Last updated: 2026-02-02
 
 ## Gap Analysis
@@ -56,13 +56,12 @@
 ### Phase 4: Organization Features
 
 - [x] Build FolderTree component with nested folder display (spec: organization.md)
-- [ ] Implement create/rename/delete folder operations (spec: organization.md)
+- [x] Implement create/rename/delete folder operations (spec: organization.md)
 - [ ] Add folder assignment to bookmark form (spec: organization.md)
 - [ ] Build TagCloud/TagList component (spec: organization.md)
 - [ ] Implement tag creation and assignment in bookmark form (spec: organization.md)
 - [ ] Add tag filtering UI (spec: organization.md)
 - [ ] Implement folder filtering (show bookmarks by folder) (spec: organization.md)
-- [ ] Handle folder deletion (move bookmarks to root) (spec: organization.md)
 
 ### Phase 5: Search & Filter
 
