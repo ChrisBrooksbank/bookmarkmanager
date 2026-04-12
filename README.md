@@ -1,42 +1,31 @@
-# sv
+# BookmarkVault
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A local-first PWA bookmark manager for power users and researchers.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Hierarchical folders** — Organize bookmarks in nested folder structures
+- **Color-coded tags** — Tag and visually categorize bookmarks
+- **Full-text search** — Instant search across titles, URLs, and notes
+- **Bulk operations** — Select, move, delete, or tag multiple bookmarks at once
+- **Import/Export** — HTML (browser-compatible), JSON, and CSV formats
+- **Offline support** — Works fully without an internet connection
+- **Dark mode** — Easy on the eyes
 
-```sh
-# create a new project
-npx sv create my-app
+## Tech Stack
+
+- SvelteKit 5 + Svelte 5
+- TypeScript
+- Tailwind CSS
+- IndexedDB (local-first storage)
+- PWA — installable, offline-first
+- Deployed on Netlify
+
+## Development
+
+```bash
+npm install
+npm run dev        # Start dev server
+npm run build      # Production build
+npm run preview    # Preview production build
 ```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --no-install .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
