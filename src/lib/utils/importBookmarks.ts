@@ -4,11 +4,26 @@ import { tagsStore } from '$lib/stores/tags.svelte';
 import { parseBookmarkFile, type BookmarkImportFormat } from './bookmarkParser';
 import type { Bookmark, Tag } from '$lib/types';
 
+export type ImportRuleMatchType = 'contains' | 'startsWith' | 'domain' | 'regex';
+
+export interface ImportTagRule {
+	/** URL matcher type */
+	matchType: ImportRuleMatchType;
+	/** Pattern to match against the bookmark URL */
+	pattern: string;
+	/** Tag names to apply when matched */
+	tags: string[];
+}
+
 export interface ImportOptions {
 	/** How to handle duplicate URLs: 'skip' | 'replace' | 'keep' */
 	duplicateHandling?: 'skip' | 'replace' | 'keep';
 	/** Create tags when imported formats carry tag names */
 	importTags?: boolean;
+	/** Tag names to apply to every imported or replaced bookmark */
+	defaultTagNames?: string[];
+	/** URL match rules that apply tag names before bookmarks are written */
+	tagRules?: ImportTagRule[];
 	/** Optional callback for progress updates (current, total) */
 	onProgress?: (current: number, total: number) => void;
 }
@@ -58,6 +73,63 @@ function createEmptyImportResult(format: BookmarkImportFormat = 'unknown'): Impo
 	};
 }
 
+function normalizeTagNames(tagNames: string[]): string[] {
+	const seen = new Set<string>();
+	const normalized: string[] = [];
+
+	for (const tagName of tagNames) {
+		const trimmed = tagName.trim();
+		const key = trimmed.toLowerCase();
+		if (!trimmed || seen.has(key)) continue;
+		seen.add(key);
+		normalized.push(trimmed);
+	}
+
+	return normalized;
+}
+
+function ruleMatchesBookmark(bookmark: Bookmark, rule: ImportTagRule): boolean {
+	const pattern = rule.pattern.trim();
+	if (!pattern) return false;
+
+	try {
+		const url = new URL(bookmark.url);
+		const href = bookmark.url.toLowerCase();
+		const lowerPattern = pattern.toLowerCase();
+
+		switch (rule.matchType) {
+			case 'contains':
+				return href.includes(lowerPattern);
+			case 'startsWith':
+				return href.startsWith(lowerPattern);
+			case 'domain':
+				return (
+					url.hostname.replace(/^www\./, '').toLowerCase() === lowerPattern.replace(/^www\./, '')
+				);
+			case 'regex':
+				return new RegExp(pattern, 'i').test(bookmark.url);
+			default:
+				return false;
+		}
+	} catch {
+		if (rule.matchType === 'contains')
+			return bookmark.url.toLowerCase().includes(pattern.toLowerCase());
+		if (rule.matchType === 'startsWith') {
+			return bookmark.url.toLowerCase().startsWith(pattern.toLowerCase());
+		}
+		return false;
+	}
+}
+
+function addTagNamesForBookmark(
+	tagNamesByBookmarkId: Map<string, string[]>,
+	bookmarkId: string,
+	tagNames: string[]
+): void {
+	const existingTagNames = tagNamesByBookmarkId.get(bookmarkId) ?? [];
+	tagNamesByBookmarkId.set(bookmarkId, normalizeTagNames([...existingTagNames, ...tagNames]));
+}
+
 /**
  * Import bookmarks from HTML file with folder structure preservation
  * @param html - The HTML content to import
@@ -76,7 +148,13 @@ export async function importBookmarksFromContent(
 	options: ImportOptions = {},
 	filename = ''
 ): Promise<ImportResult> {
-	const { duplicateHandling = 'skip', importTags = true, onProgress } = options;
+	const {
+		duplicateHandling = 'skip',
+		importTags = true,
+		defaultTagNames = [],
+		tagRules = [],
+		onProgress
+	} = options;
 
 	const parseResult = parseBookmarkFile(content, filename);
 	const result = createEmptyImportResult(parseResult.format);
@@ -99,10 +177,16 @@ export async function importBookmarksFromContent(
 	const bookmarksToAdd: Bookmark[] = [];
 	const bookmarksToUpdate: Bookmark[] = [];
 	const bookmarksThatNeedTags: Bookmark[] = [];
+	const tagNamesByBookmarkId = new Map<string, string[]>();
+	if (importTags) {
+		for (const [bookmarkId, tagNames] of parseResult.tagNamesByBookmarkId) {
+			tagNamesByBookmarkId.set(bookmarkId, normalizeTagNames(tagNames));
+		}
+	}
 	const totalWork =
 		parseResult.folders.length +
 		parseResult.bookmarks.length +
-		parseResult.tagNamesByBookmarkId.size;
+		(importTags ? parseResult.tagNamesByBookmarkId.size : 0);
 	let completedWork = 0;
 	const reportProgress = (increment = 1) => {
 		completedWork += increment;
@@ -130,7 +214,7 @@ export async function importBookmarksFromContent(
 		}
 
 		if (existing && duplicateHandling === 'replace') {
-			const importedTagNames = parseResult.tagNamesByBookmarkId.get(bookmark.id);
+			const importedTagNames = tagNamesByBookmarkId.get(bookmark.id);
 			const updatedBookmark: Bookmark = {
 				...bookmark,
 				id: existing.id,
@@ -138,7 +222,7 @@ export async function importBookmarksFromContent(
 				updatedAt: Date.now()
 			};
 			if (importedTagNames) {
-				parseResult.tagNamesByBookmarkId.set(updatedBookmark.id, importedTagNames);
+				tagNamesByBookmarkId.set(updatedBookmark.id, importedTagNames);
 			}
 			bookmarksToUpdate.push(updatedBookmark);
 			bookmarksThatNeedTags.push(updatedBookmark);
@@ -156,12 +240,39 @@ export async function importBookmarksFromContent(
 		reportProgress();
 	}
 
-	if (importTags && parseResult.tagNamesByBookmarkId.size > 0) {
+	const cleanDefaultTagNames = normalizeTagNames(defaultTagNames);
+	const cleanRules = tagRules
+		.map((rule) => ({
+			...rule,
+			pattern: rule.pattern.trim(),
+			tags: normalizeTagNames(rule.tags)
+		}))
+		.filter((rule) => rule.pattern && rule.tags.length > 0);
+
+	for (const bookmark of bookmarksThatNeedTags) {
+		if (cleanDefaultTagNames.length > 0) {
+			addTagNamesForBookmark(tagNamesByBookmarkId, bookmark.id, cleanDefaultTagNames);
+		}
+
+		for (const rule of cleanRules) {
+			try {
+				if (ruleMatchesBookmark(bookmark, rule)) {
+					addTagNamesForBookmark(tagNamesByBookmarkId, bookmark.id, rule.tags);
+				}
+			} catch (error) {
+				result.errors.push(
+					`Skipped import rule "${rule.pattern}": ${error instanceof Error ? error.message : 'Unknown error'}`
+				);
+			}
+		}
+	}
+
+	if (tagNamesByBookmarkId.size > 0) {
 		const tagsByName = new Map(tagsStore.items.map((tag) => [tag.name.toLowerCase(), tag]));
 		const tagsToAdd: Tag[] = [];
 
 		for (const bookmark of bookmarksThatNeedTags) {
-			const tagNames = parseResult.tagNamesByBookmarkId.get(bookmark.id) ?? [];
+			const tagNames = tagNamesByBookmarkId.get(bookmark.id) ?? [];
 			const tagIds: string[] = [];
 
 			for (const tagName of tagNames) {

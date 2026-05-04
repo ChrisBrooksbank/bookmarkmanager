@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { importBookmarksFromHTML, importBookmarksFromFile } from './importBookmarks';
 import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
 import { foldersStore } from '$lib/stores/folders.svelte';
+import { tagsStore } from '$lib/stores/tags.svelte';
 
 // Mock the stores
 vi.mock('$lib/stores/bookmarks.svelte', () => ({
@@ -33,6 +34,7 @@ describe('importBookmarksFromHTML', () => {
 		vi.clearAllMocks();
 		// Reset mock items array
 		(bookmarksStore as any).items = [];
+		(tagsStore as any).items = [];
 	});
 
 	it('should return error for invalid HTML', async () => {
@@ -303,12 +305,88 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.errors.length).toBeGreaterThan(0);
 		expect(result.errors.some((e) => e.includes('invalid URL'))).toBe(true);
 	});
+
+	it('should apply default tag names to every imported bookmark', async () => {
+		const html = `
+			<!DOCTYPE NETSCAPE-Bookmark-file-1>
+			<HTML>
+			<DL>
+				<DT><A HREF="https://example.com">Example</A>
+				<DT><A HREF="https://test.com">Test</A>
+			</DL>
+			</HTML>
+		`;
+
+		const result = await importBookmarksFromHTML(html, {
+			defaultTagNames: ['Inbox', 'Research']
+		});
+
+		expect(result.bookmarksImported).toBe(2);
+		expect(result.tagsImported).toBe(2);
+		expect(tagsStore.addMany).toHaveBeenCalledWith(
+			expect.arrayContaining([
+				expect.objectContaining({ name: 'Inbox' }),
+				expect.objectContaining({ name: 'Research' })
+			])
+		);
+
+		const addedBookmarks = (bookmarksStore.addMany as any).mock.calls[0][0];
+		expect(addedBookmarks[0].tags).toHaveLength(2);
+		expect(addedBookmarks[1].tags).toEqual(addedBookmarks[0].tags);
+	});
+
+	it('should apply contains, starts with, domain, and regex tag rules before bulk write', async () => {
+		(tagsStore as any).items = [{ id: 'existing-docs', name: 'Docs' }];
+		const html = `
+			<!DOCTYPE NETSCAPE-Bookmark-file-1>
+			<HTML>
+			<DL>
+				<DT><A HREF="https://github.com/acme/project">GitHub</A>
+				<DT><A HREF="https://example.com/docs/api">Docs</A>
+				<DT><A HREF="https://news.example.com/article">News</A>
+			</DL>
+			</HTML>
+		`;
+
+		const result = await importBookmarksFromHTML(html, {
+			tagRules: [
+				{ matchType: 'domain', pattern: 'github.com', tags: ['Dev'] },
+				{ matchType: 'contains', pattern: '/docs/', tags: ['Docs'] },
+				{ matchType: 'startsWith', pattern: 'https://news.', tags: ['News'] },
+				{ matchType: 'regex', pattern: 'api$', tags: ['API'] }
+			]
+		});
+
+		expect(result.bookmarksImported).toBe(3);
+		expect(result.tagsImported).toBe(3);
+
+		const addedTags = (tagsStore.addMany as any).mock.calls[0][0];
+		expect(addedTags.map((tag: { name: string }) => tag.name).sort()).toEqual([
+			'API',
+			'Dev',
+			'News'
+		]);
+
+		const addedBookmarks = (bookmarksStore.addMany as any).mock.calls[0][0];
+		const github = addedBookmarks.find((bookmark: { url: string }) =>
+			bookmark.url.includes('github.com')
+		);
+		const docs = addedBookmarks.find((bookmark: { url: string }) =>
+			bookmark.url.includes('/docs/')
+		);
+		const news = addedBookmarks.find((bookmark: { url: string }) => bookmark.url.includes('news.'));
+		expect(github.tags).toHaveLength(1);
+		expect(docs.tags).toContain('existing-docs');
+		expect(docs.tags).toHaveLength(2);
+		expect(news.tags).toHaveLength(1);
+	});
 });
 
 describe('importBookmarksFromFile', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		(bookmarksStore as any).items = [];
+		(tagsStore as any).items = [];
 	});
 
 	it('should read file and import bookmarks', async () => {
