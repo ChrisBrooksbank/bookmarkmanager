@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handler } from './fetch-metadata';
+import { handler } from '../../netlify/functions/fetch-metadata';
 import type { HandlerEvent, HandlerContext } from '@netlify/functions';
 
 // Mock fetch
@@ -34,6 +34,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'OPTIONS',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -58,6 +59,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'DELETE',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -80,6 +82,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -100,6 +103,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'POST',
 				headers: {},
+				multiValueHeaders: {},
 				body: JSON.stringify({}),
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -120,6 +124,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -162,6 +167,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -201,6 +207,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'POST',
 				headers: {},
+				multiValueHeaders: {},
 				body: JSON.stringify({ url: 'https://example.com' }),
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -237,6 +244,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -259,6 +267,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -286,6 +295,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -324,6 +334,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
@@ -360,6 +371,7 @@ describe('fetch-metadata Netlify Function', () => {
 			const event: HandlerEvent = {
 				httpMethod: 'GET',
 				headers: {},
+				multiValueHeaders: {},
 				body: null,
 				isBase64Encoded: false,
 				rawUrl: '',
