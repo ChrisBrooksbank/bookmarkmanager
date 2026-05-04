@@ -98,6 +98,8 @@ function saveToLocalStorage(state: UIState): void {
  */
 function createUIStateStore() {
 	let state = $state<UIState>(loadFromLocalStorage());
+	const selectedTagIdSet = $derived(new Set(state.selectedTagIds));
+	const selectedBookmarkIdSet = $derived(new Set(state.selectedBookmarkIds));
 
 	/**
 	 * Set view mode
@@ -151,7 +153,7 @@ function createUIStateStore() {
 	 * Add a tag to the selected tags
 	 */
 	function addSelectedTag(tagId: string): void {
-		if (!state.selectedTagIds.includes(tagId)) {
+		if (!selectedTagIdSet.has(tagId)) {
 			state.selectedTagIds = [...state.selectedTagIds, tagId];
 		}
 	}
@@ -167,7 +169,7 @@ function createUIStateStore() {
 	 * Toggle a tag in the selected tags
 	 */
 	function toggleSelectedTag(tagId: string): void {
-		if (state.selectedTagIds.includes(tagId)) {
+		if (selectedTagIdSet.has(tagId)) {
 			removeSelectedTag(tagId);
 		} else {
 			addSelectedTag(tagId);
@@ -189,7 +191,7 @@ function createUIStateStore() {
 	 * Toggle bookmark selection
 	 */
 	function toggleBookmarkSelection(bookmarkId: string): void {
-		if (state.selectedBookmarkIds.includes(bookmarkId)) {
+		if (selectedBookmarkIdSet.has(bookmarkId)) {
 			state.selectedBookmarkIds = state.selectedBookmarkIds.filter((id) => id !== bookmarkId);
 		} else {
 			state.selectedBookmarkIds = [...state.selectedBookmarkIds, bookmarkId];
@@ -221,7 +223,7 @@ function createUIStateStore() {
 	 * Check if a bookmark is selected
 	 */
 	function isBookmarkSelected(bookmarkId: string): boolean {
-		return state.selectedBookmarkIds.includes(bookmarkId);
+		return selectedBookmarkIdSet.has(bookmarkId);
 	}
 
 	/**

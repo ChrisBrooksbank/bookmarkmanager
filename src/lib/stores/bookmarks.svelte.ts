@@ -5,6 +5,7 @@
 
 import type { Bookmark } from '$lib/types';
 import { bookmarks as db } from '$lib/db';
+import { SvelteMap } from 'svelte/reactivity';
 
 const STORAGE_KEY = 'bookmarks-fallback';
 
@@ -39,6 +40,40 @@ function createBookmarksStore() {
 	let bookmarks = $state<Bookmark[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	const bookmarksById = $derived(
+		new SvelteMap(bookmarks.map((bookmark) => [bookmark.id, bookmark]))
+	);
+	const bookmarksByFolderId = $derived.by(() => {
+		const byFolder = new SvelteMap<string | null, Bookmark[]>();
+
+		for (const bookmark of bookmarks) {
+			const folderId = bookmark.folderId ?? null;
+			const folderBookmarks = byFolder.get(folderId);
+			if (folderBookmarks) {
+				folderBookmarks.push(bookmark);
+			} else {
+				byFolder.set(folderId, [bookmark]);
+			}
+		}
+
+		return byFolder;
+	});
+	const bookmarksByTagId = $derived.by(() => {
+		const byTag = new SvelteMap<string, Bookmark[]>();
+
+		for (const bookmark of bookmarks) {
+			for (const tagId of bookmark.tags) {
+				const tagBookmarks = byTag.get(tagId);
+				if (tagBookmarks) {
+					tagBookmarks.push(bookmark);
+				} else {
+					byTag.set(tagId, [bookmark]);
+				}
+			}
+		}
+
+		return byTag;
+	});
 
 	/**
 	 * Load all bookmarks from IndexedDB
@@ -110,21 +145,21 @@ function createBookmarksStore() {
 	 * Get a bookmark by ID
 	 */
 	function getById(id: string): Bookmark | undefined {
-		return bookmarks.find((b) => b.id === id);
+		return bookmarksById.get(id);
 	}
 
 	/**
 	 * Get bookmarks by folder ID
 	 */
 	function getByFolderId(folderId: string | null): Bookmark[] {
-		return bookmarks.filter((b) => b.folderId === folderId);
+		return bookmarksByFolderId.get(folderId) ?? [];
 	}
 
 	/**
 	 * Get bookmarks by tag ID
 	 */
 	function getByTagId(tagId: string): Bookmark[] {
-		return bookmarks.filter((b) => b.tags.includes(tagId));
+		return bookmarksByTagId.get(tagId) ?? [];
 	}
 
 	/**
