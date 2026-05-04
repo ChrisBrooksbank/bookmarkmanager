@@ -435,7 +435,7 @@ describe('bookmarksStore', () => {
 			await db.add(bookmark);
 			await bookmarksStore.load();
 
-			vi.spyOn(db, 'update').mockRejectedValue(new Error('IndexedDB failed'));
+			vi.spyOn(db, 'updateMany').mockRejectedValue(new Error('IndexedDB failed'));
 
 			await bookmarksStore.bulkAddTags([bookmark.id], ['tag-2']);
 
@@ -508,7 +508,7 @@ describe('bookmarksStore', () => {
 			await db.add(bookmark);
 			await bookmarksStore.load();
 
-			vi.spyOn(db, 'update').mockRejectedValue(new Error('IndexedDB failed'));
+			vi.spyOn(db, 'updateMany').mockRejectedValue(new Error('IndexedDB failed'));
 
 			await bookmarksStore.bulkRemoveTags([bookmark.id], ['tag-1']);
 
@@ -583,7 +583,7 @@ describe('bookmarksStore', () => {
 			await db.add(bookmark);
 			await bookmarksStore.load();
 
-			vi.spyOn(db, 'update').mockRejectedValue(new Error('IndexedDB failed'));
+			vi.spyOn(db, 'updateMany').mockRejectedValue(new Error('IndexedDB failed'));
 
 			await bookmarksStore.bulkMoveToFolder([bookmark.id], 'folder-2');
 
@@ -649,7 +649,7 @@ describe('bookmarksStore', () => {
 			await db.add(bookmark2);
 			await bookmarksStore.load();
 
-			vi.spyOn(db, 'delete').mockRejectedValue(new Error('IndexedDB failed'));
+			vi.spyOn(db, 'deleteMany').mockRejectedValue(new Error('IndexedDB failed'));
 
 			await bookmarksStore.bulkDelete([bookmark1.id]);
 

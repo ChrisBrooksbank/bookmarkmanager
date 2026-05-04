@@ -146,8 +146,7 @@ function createBookmarksStore() {
 	 */
 	async function clear(): Promise<void> {
 		try {
-			const allBookmarks = await db.getAll();
-			await Promise.all(allBookmarks.map((b) => db.delete(b.id)));
+			await db.deleteMany(bookmarks.map((b) => b.id));
 			bookmarks = [];
 			saveToLocalStorage(bookmarks);
 		} catch (err) {
@@ -163,30 +162,27 @@ function createBookmarksStore() {
 	 */
 	async function bulkAddTags(bookmarkIds: string[], tagIds: string[]): Promise<void> {
 		try {
-			const updates: Promise<unknown>[] = [];
 			const updatedBookmarks: Bookmark[] = [];
+			const bookmarkIdSet = new Set(bookmarkIds);
 
-			for (const id of bookmarkIds) {
-				const bookmark = bookmarks.find((b) => b.id === id);
-				if (bookmark) {
-					// Add tags that aren't already present
+			for (const bookmark of bookmarks) {
+				if (bookmarkIdSet.has(bookmark.id)) {
 					const newTags = [...new Set([...bookmark.tags, ...tagIds])];
 					const updatedBookmark = {
 						...bookmark,
 						tags: newTags,
 						updatedAt: Date.now()
 					};
-					updates.push(db.update(updatedBookmark));
 					updatedBookmarks.push(updatedBookmark);
 				}
 			}
 
-			await Promise.all(updates);
+			await db.updateMany(updatedBookmarks);
 
 			// Update local state
+			const updatedById = new Map(updatedBookmarks.map((bookmark) => [bookmark.id, bookmark]));
 			bookmarks = bookmarks.map((b) => {
-				const updated = updatedBookmarks.find((ub) => ub.id === b.id);
-				return updated || b;
+				return updatedById.get(b.id) || b;
 			});
 			saveToLocalStorage(bookmarks);
 		} catch (err) {
@@ -194,8 +190,9 @@ function createBookmarksStore() {
 			error = 'Failed to save to database, using local backup';
 
 			// Update local state even on error
+			const bookmarkIdSet = new Set(bookmarkIds);
 			bookmarks = bookmarks.map((b) => {
-				if (bookmarkIds.includes(b.id)) {
+				if (bookmarkIdSet.has(b.id)) {
 					const newTags = [...new Set([...b.tags, ...tagIds])];
 					return {
 						...b,
@@ -214,30 +211,28 @@ function createBookmarksStore() {
 	 */
 	async function bulkRemoveTags(bookmarkIds: string[], tagIds: string[]): Promise<void> {
 		try {
-			const updates: Promise<unknown>[] = [];
 			const updatedBookmarks: Bookmark[] = [];
+			const bookmarkIdSet = new Set(bookmarkIds);
+			const tagIdSet = new Set(tagIds);
 
-			for (const id of bookmarkIds) {
-				const bookmark = bookmarks.find((b) => b.id === id);
-				if (bookmark) {
-					// Remove specified tags
-					const newTags = bookmark.tags.filter((tagId) => !tagIds.includes(tagId));
+			for (const bookmark of bookmarks) {
+				if (bookmarkIdSet.has(bookmark.id)) {
+					const newTags = bookmark.tags.filter((tagId) => !tagIdSet.has(tagId));
 					const updatedBookmark = {
 						...bookmark,
 						tags: newTags,
 						updatedAt: Date.now()
 					};
-					updates.push(db.update(updatedBookmark));
 					updatedBookmarks.push(updatedBookmark);
 				}
 			}
 
-			await Promise.all(updates);
+			await db.updateMany(updatedBookmarks);
 
 			// Update local state
+			const updatedById = new Map(updatedBookmarks.map((bookmark) => [bookmark.id, bookmark]));
 			bookmarks = bookmarks.map((b) => {
-				const updated = updatedBookmarks.find((ub) => ub.id === b.id);
-				return updated || b;
+				return updatedById.get(b.id) || b;
 			});
 			saveToLocalStorage(bookmarks);
 		} catch (err) {
@@ -245,9 +240,11 @@ function createBookmarksStore() {
 			error = 'Failed to save to database, using local backup';
 
 			// Update local state even on error
+			const bookmarkIdSet = new Set(bookmarkIds);
+			const tagIdSet = new Set(tagIds);
 			bookmarks = bookmarks.map((b) => {
-				if (bookmarkIds.includes(b.id)) {
-					const newTags = b.tags.filter((tagId) => !tagIds.includes(tagId));
+				if (bookmarkIdSet.has(b.id)) {
+					const newTags = b.tags.filter((tagId) => !tagIdSet.has(tagId));
 					return {
 						...b,
 						tags: newTags,
@@ -265,12 +262,11 @@ function createBookmarksStore() {
 	 */
 	async function bulkMoveToFolder(bookmarkIds: string[], folderId: string | null): Promise<void> {
 		try {
-			const updates: Promise<unknown>[] = [];
 			const updatedBookmarks: Bookmark[] = [];
+			const bookmarkIdSet = new Set(bookmarkIds);
 
-			for (const id of bookmarkIds) {
-				const bookmark = bookmarks.find((b) => b.id === id);
-				if (bookmark) {
+			for (const bookmark of bookmarks) {
+				if (bookmarkIdSet.has(bookmark.id)) {
 					// Create a clean copy to avoid Svelte reactivity issues with structured clone
 					const updatedBookmark: Bookmark = {
 						id: bookmark.id,
@@ -282,19 +278,19 @@ function createBookmarksStore() {
 						tags: [...bookmark.tags],
 						createdAt: bookmark.createdAt,
 						updatedAt: Date.now(),
-						faviconUrl: bookmark.faviconUrl
+						faviconUrl: bookmark.faviconUrl,
+						ogImage: bookmark.ogImage
 					};
-					updates.push(db.update(updatedBookmark));
 					updatedBookmarks.push(updatedBookmark);
 				}
 			}
 
-			await Promise.all(updates);
+			await db.updateMany(updatedBookmarks);
 
 			// Update local state
+			const updatedById = new Map(updatedBookmarks.map((bookmark) => [bookmark.id, bookmark]));
 			bookmarks = bookmarks.map((b) => {
-				const updated = updatedBookmarks.find((ub) => ub.id === b.id);
-				return updated || b;
+				return updatedById.get(b.id) || b;
 			});
 			saveToLocalStorage(bookmarks);
 		} catch (err) {
@@ -302,8 +298,9 @@ function createBookmarksStore() {
 			error = 'Failed to save to database, using local backup';
 
 			// Update local state even on error
+			const bookmarkIdSet = new Set(bookmarkIds);
 			bookmarks = bookmarks.map((b) => {
-				if (bookmarkIds.includes(b.id)) {
+				if (bookmarkIdSet.has(b.id)) {
 					return {
 						...b,
 						folderId,
@@ -321,23 +318,19 @@ function createBookmarksStore() {
 	 */
 	async function bulkDelete(bookmarkIds: string[]): Promise<void> {
 		try {
-			const deletes: Promise<unknown>[] = [];
-
-			for (const id of bookmarkIds) {
-				deletes.push(db.delete(id));
-			}
-
-			await Promise.all(deletes);
+			await db.deleteMany(bookmarkIds);
 
 			// Update local state
-			bookmarks = bookmarks.filter((b) => !bookmarkIds.includes(b.id));
+			const bookmarkIdSet = new Set(bookmarkIds);
+			bookmarks = bookmarks.filter((b) => !bookmarkIdSet.has(b.id));
 			saveToLocalStorage(bookmarks);
 		} catch (err) {
 			console.error('Failed to bulk delete from IndexedDB, using localStorage:', err);
 			error = 'Failed to delete from database, using local backup';
 
 			// Update local state even on error
-			bookmarks = bookmarks.filter((b) => !bookmarkIds.includes(b.id));
+			const bookmarkIdSet = new Set(bookmarkIds);
+			bookmarks = bookmarks.filter((b) => !bookmarkIdSet.has(b.id));
 			saveToLocalStorage(bookmarks);
 		}
 	}

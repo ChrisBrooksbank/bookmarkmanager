@@ -15,6 +15,8 @@ const STORES = {
 	TAGS: 'tags'
 } as const;
 
+let cachedDBPromise: Promise<IDBDatabase> | null = null;
+
 /**
  * Initialize the IndexedDB database with schema
  */
@@ -23,7 +25,14 @@ function initDB(): Promise<IDBDatabase> {
 		const request = indexedDB.open(DB_NAME, DB_VERSION);
 
 		request.onerror = () => reject(request.error);
-		request.onsuccess = () => resolve(request.result);
+		request.onsuccess = () => {
+			const db = request.result;
+			db.onversionchange = () => {
+				db.close();
+				cachedDBPromise = null;
+			};
+			resolve(db);
+		};
 
 		request.onupgradeneeded = (event) => {
 			const db = (event.target as IDBOpenDBRequest).result;
@@ -57,7 +66,13 @@ function initDB(): Promise<IDBDatabase> {
  * Get a connection to the database
  */
 async function getDB(): Promise<IDBDatabase> {
-	return initDB();
+	if (!cachedDBPromise) {
+		cachedDBPromise = initDB().catch((error) => {
+			cachedDBPromise = null;
+			throw error;
+		});
+	}
+	return cachedDBPromise;
 }
 
 /**
@@ -76,6 +91,26 @@ async function performTransaction<T>(
 
 		request.onsuccess = () => resolve(request.result);
 		request.onerror = () => reject(request.error);
+	});
+}
+
+/**
+ * Generic helper for write transactions that contain multiple requests.
+ */
+async function performWriteTransaction(
+	storeName: string,
+	operation: (store: IDBObjectStore) => void
+): Promise<void> {
+	const db = await getDB();
+	return new Promise((resolve, reject) => {
+		const transaction = db.transaction(storeName, 'readwrite');
+		const store = transaction.objectStore(storeName);
+
+		transaction.oncomplete = () => resolve();
+		transaction.onerror = () => reject(transaction.error);
+		transaction.onabort = () => reject(transaction.error);
+
+		operation(store);
 	});
 }
 
@@ -101,6 +136,18 @@ async function add<T>(storeName: string, item: T): Promise<IDBValidKey> {
 }
 
 /**
+ * Generic helper to add multiple items in one transaction
+ */
+async function addMany<T>(storeName: string, items: T[]): Promise<void> {
+	if (items.length === 0) return;
+	return performWriteTransaction(storeName, (store) => {
+		for (const item of items) {
+			store.add(item);
+		}
+	});
+}
+
+/**
  * Generic helper to update an item
  */
 async function update<T>(storeName: string, item: T): Promise<IDBValidKey> {
@@ -108,10 +155,34 @@ async function update<T>(storeName: string, item: T): Promise<IDBValidKey> {
 }
 
 /**
+ * Generic helper to update multiple items in one transaction
+ */
+async function updateMany<T>(storeName: string, items: T[]): Promise<void> {
+	if (items.length === 0) return;
+	return performWriteTransaction(storeName, (store) => {
+		for (const item of items) {
+			store.put(item);
+		}
+	});
+}
+
+/**
  * Generic helper to delete an item by id
  */
 async function deleteById(storeName: string, id: string): Promise<void> {
 	return performTransaction(storeName, 'readwrite', (store) => store.delete(id));
+}
+
+/**
+ * Generic helper to delete multiple items in one transaction
+ */
+async function deleteMany(storeName: string, ids: string[]): Promise<void> {
+	if (ids.length === 0) return;
+	return performWriteTransaction(storeName, (store) => {
+		for (const id of ids) {
+			store.delete(id);
+		}
+	});
 }
 
 /**
@@ -152,8 +223,11 @@ export const bookmarks = {
 	getAll: (): Promise<Bookmark[]> => getAll<Bookmark>(STORES.BOOKMARKS),
 	getById: (id: string): Promise<Bookmark | undefined> => getById<Bookmark>(STORES.BOOKMARKS, id),
 	add: (bookmark: Bookmark): Promise<IDBValidKey> => add(STORES.BOOKMARKS, bookmark),
+	addMany: (bookmarks: Bookmark[]): Promise<void> => addMany(STORES.BOOKMARKS, bookmarks),
 	update: (bookmark: Bookmark): Promise<IDBValidKey> => update(STORES.BOOKMARKS, bookmark),
+	updateMany: (bookmarks: Bookmark[]): Promise<void> => updateMany(STORES.BOOKMARKS, bookmarks),
 	delete: (id: string): Promise<void> => deleteById(STORES.BOOKMARKS, id),
+	deleteMany: (ids: string[]): Promise<void> => deleteMany(STORES.BOOKMARKS, ids),
 	getByFolderId: (folderId: string | null): Promise<Bookmark[]> =>
 		getAllByIndex<Bookmark>(STORES.BOOKMARKS, 'folderId', folderId),
 	getByUrl: (url: string): Promise<Bookmark[]> =>
@@ -165,8 +239,11 @@ export const folders = {
 	getAll: (): Promise<Folder[]> => getAll<Folder>(STORES.FOLDERS),
 	getById: (id: string): Promise<Folder | undefined> => getById<Folder>(STORES.FOLDERS, id),
 	add: (folder: Folder): Promise<IDBValidKey> => add(STORES.FOLDERS, folder),
+	addMany: (folders: Folder[]): Promise<void> => addMany(STORES.FOLDERS, folders),
 	update: (folder: Folder): Promise<IDBValidKey> => update(STORES.FOLDERS, folder),
+	updateMany: (folders: Folder[]): Promise<void> => updateMany(STORES.FOLDERS, folders),
 	delete: (id: string): Promise<void> => deleteById(STORES.FOLDERS, id),
+	deleteMany: (ids: string[]): Promise<void> => deleteMany(STORES.FOLDERS, ids),
 	getByParentId: (parentId: string | null): Promise<Folder[]> =>
 		getAllByIndex<Folder>(STORES.FOLDERS, 'parentId', parentId)
 };
@@ -176,36 +253,38 @@ export const tags = {
 	getAll: (): Promise<Tag[]> => getAll<Tag>(STORES.TAGS),
 	getById: (id: string): Promise<Tag | undefined> => getById<Tag>(STORES.TAGS, id),
 	add: (tag: Tag): Promise<IDBValidKey> => add(STORES.TAGS, tag),
+	addMany: (tags: Tag[]): Promise<void> => addMany(STORES.TAGS, tags),
 	update: (tag: Tag): Promise<IDBValidKey> => update(STORES.TAGS, tag),
-	delete: (id: string): Promise<void> => deleteById(STORES.TAGS, id)
+	updateMany: (tags: Tag[]): Promise<void> => updateMany(STORES.TAGS, tags),
+	delete: (id: string): Promise<void> => deleteById(STORES.TAGS, id),
+	deleteMany: (ids: string[]): Promise<void> => deleteMany(STORES.TAGS, ids)
 };
 
 // Utility to clear all data (useful for testing)
 export async function clearAllData(): Promise<void> {
 	const db = await getDB();
-	const transaction = db.transaction([STORES.BOOKMARKS, STORES.FOLDERS, STORES.TAGS], 'readwrite');
+	return new Promise((resolve, reject) => {
+		const transaction = db.transaction(
+			[STORES.BOOKMARKS, STORES.FOLDERS, STORES.TAGS],
+			'readwrite'
+		);
 
-	await Promise.all([
-		new Promise<void>((resolve, reject) => {
-			const request = transaction.objectStore(STORES.BOOKMARKS).clear();
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
-		}),
-		new Promise<void>((resolve, reject) => {
-			const request = transaction.objectStore(STORES.FOLDERS).clear();
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
-		}),
-		new Promise<void>((resolve, reject) => {
-			const request = transaction.objectStore(STORES.TAGS).clear();
-			request.onsuccess = () => resolve();
-			request.onerror = () => reject(request.error);
-		})
-	]);
+		transaction.oncomplete = () => resolve();
+		transaction.onerror = () => reject(transaction.error);
+		transaction.onabort = () => reject(transaction.error);
+
+		transaction.objectStore(STORES.BOOKMARKS).clear();
+		transaction.objectStore(STORES.FOLDERS).clear();
+		transaction.objectStore(STORES.TAGS).clear();
+	});
 }
 
 // Delete the entire database (useful for testing)
 export async function deleteDatabase(): Promise<void> {
+	const db = await cachedDBPromise?.catch(() => null);
+	db?.close();
+	cachedDBPromise = null;
+
 	return new Promise((resolve, reject) => {
 		const request = indexedDB.deleteDatabase(DB_NAME);
 		request.onsuccess = () => resolve();

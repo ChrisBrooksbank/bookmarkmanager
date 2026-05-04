@@ -16,10 +16,10 @@
 
 	let isEditing = $state(false);
 	let showDeleteConfirm = $state(false);
-	let editedTitle = $state(bookmark.title);
-	let editedUrl = $state(bookmark.url);
-	let editedDescription = $state(bookmark.description || '');
-	let editedNotes = $state(bookmark.notes || '');
+	let editedTitle = $state('');
+	let editedUrl = $state('');
+	let editedDescription = $state('');
+	let editedNotes = $state('');
 
 	/**
 	 * Enter edit mode

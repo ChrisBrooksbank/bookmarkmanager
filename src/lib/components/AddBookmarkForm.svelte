@@ -15,9 +15,9 @@
 	let { onClose, initialUrl = '', initialTitle = '', initialDescription = '' }: Props = $props();
 
 	// Form state
-	let url = $state(initialUrl);
-	let title = $state(initialTitle);
-	let description = $state(initialDescription);
+	let url = $state('');
+	let title = $state('');
+	let description = $state('');
 	let notes = $state('');
 	let folderId = $state<string | null>(null);
 	let selectedTagIds = $state<string[]>([]);
@@ -25,6 +25,12 @@
 	let showTagSuggestions = $state(false);
 	let submitting = $state(false);
 	let urlError = $state('');
+
+	$effect(() => {
+		url = initialUrl;
+		title = initialTitle;
+		description = initialDescription;
+	});
 
 	/**
 	 * Validate URL format

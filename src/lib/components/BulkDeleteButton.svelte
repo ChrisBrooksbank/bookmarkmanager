@@ -22,23 +22,19 @@
 		isConfirming = false;
 	}
 
-	// Close confirmation when clicking outside
-	function handleClickOutside(event: MouseEvent) {
-		const target = event.target as HTMLElement;
-		if (!target.closest('[data-bulk-delete-modal]')) {
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
 			cancelDelete();
 		}
 	}
 
 	$effect(() => {
-		if (!browser) return;
+		if (!browser || !isConfirming) return;
 
-		if (isConfirming) {
-			document.addEventListener('click', handleClickOutside);
-			return () => {
-				document.removeEventListener('click', handleClickOutside);
-			};
-		}
+		document.addEventListener('keydown', handleKeydown);
+		return () => {
+			document.removeEventListener('keydown', handleKeydown);
+		};
 	});
 </script>
 
@@ -62,17 +58,18 @@
 
 	{#if isConfirming}
 		<div
-			class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-			data-bulk-delete-modal
+			class="fixed inset-0 z-50 flex items-center justify-center"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="delete-dialog-title"
 		>
-			<div
-				class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
-				role="document"
-				onclick={(e) => e.stopPropagation()}
-			>
+			<button
+				type="button"
+				class="absolute inset-0 bg-black bg-opacity-50"
+				aria-label="Cancel bulk delete"
+				onclick={cancelDelete}
+			></button>
+			<div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
 				<div class="flex items-start gap-4">
 					<div
 						class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center"

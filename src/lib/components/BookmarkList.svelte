@@ -14,9 +14,9 @@
 	let isSelected = $derived(uiStateStore.isBookmarkSelected(bookmark.id));
 
 	let isEditing = $state(false);
-	let editedTitle = $state(bookmark.title);
-	let editedUrl = $state(bookmark.url);
-	let editedDescription = $state(bookmark.description || '');
+	let editedTitle = $state('');
+	let editedUrl = $state('');
+	let editedDescription = $state('');
 
 	/**
 	 * Enter edit mode

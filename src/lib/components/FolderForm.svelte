@@ -14,7 +14,7 @@
 	let { folder = null, parentId = null, onClose }: Props = $props();
 
 	// Form state
-	let name = $state(folder?.name || '');
+	let name = $derived(folder?.name || '');
 	let submitting = $state(false);
 	let error = $state('');
 
