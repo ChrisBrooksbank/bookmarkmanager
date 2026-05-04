@@ -8,6 +8,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import DateRangeFilter from '$lib/components/DateRangeFilter.svelte';
 	import SortSelector from '$lib/components/SortSelector.svelte';
+	import ImportMenu from '$lib/components/ImportMenu.svelte';
 	import ExportMenu from '$lib/components/ExportMenu.svelte';
 	import Bookmarklet from '$lib/components/Bookmarklet.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
@@ -592,7 +593,8 @@
 					</button>
 				{/if}
 
-				<!-- Export Menu -->
+				<!-- Import and Export Menus -->
+				<ImportMenu />
 				<ExportMenu bookmarks={filteredBookmarks} folders={foldersStore.items} />
 			</div>
 		</header>

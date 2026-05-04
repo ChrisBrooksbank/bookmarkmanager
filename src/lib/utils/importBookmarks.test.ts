@@ -8,13 +8,23 @@ vi.mock('$lib/stores/bookmarks.svelte', () => ({
 	bookmarksStore: {
 		items: [],
 		add: vi.fn(),
-		update: vi.fn()
+		addMany: vi.fn(),
+		update: vi.fn(),
+		updateMany: vi.fn()
 	}
 }));
 
 vi.mock('$lib/stores/folders.svelte', () => ({
 	foldersStore: {
-		add: vi.fn()
+		add: vi.fn(),
+		addMany: vi.fn()
+	}
+}));
+
+vi.mock('$lib/stores/tags.svelte', () => ({
+	tagsStore: {
+		items: [],
+		addMany: vi.fn()
 	}
 }));
 
@@ -54,7 +64,8 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.bookmarksImported).toBe(2);
 		expect(result.foldersImported).toBe(0);
 		expect(result.errors).toHaveLength(0);
-		expect(bookmarksStore.add).toHaveBeenCalledTimes(2);
+		expect(bookmarksStore.addMany).toHaveBeenCalledTimes(1);
+		expect((bookmarksStore.addMany as any).mock.calls[0][0]).toHaveLength(2);
 	});
 
 	it('should import folders before bookmarks', async () => {
@@ -76,12 +87,8 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.errors).toHaveLength(0);
 
 		// Verify folders are added before bookmarks
-		const calls = [
-			...(foldersStore.add as any).mock.calls,
-			...(bookmarksStore.add as any).mock.calls
-		];
-		expect(calls.length).toBe(2);
-		expect((foldersStore.add as any).mock.calls.length).toBe(1);
+		expect(foldersStore.addMany).toHaveBeenCalledTimes(1);
+		expect(bookmarksStore.addMany).toHaveBeenCalledTimes(1);
 	});
 
 	it('should preserve folder hierarchy', async () => {
@@ -104,7 +111,8 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.bookmarksImported).toBe(1);
 		expect(result.foldersImported).toBe(2);
 		expect(result.errors).toHaveLength(0);
-		expect(foldersStore.add).toHaveBeenCalledTimes(2);
+		expect(foldersStore.addMany).toHaveBeenCalledTimes(1);
+		expect((foldersStore.addMany as any).mock.calls[0][0]).toHaveLength(2);
 	});
 
 	it('should skip duplicate bookmarks by default', async () => {
@@ -135,8 +143,9 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.bookmarksImported).toBe(1); // Only test.com
 		expect(result.bookmarksSkipped).toBe(1); // example.com skipped
 		expect(result.errors).toHaveLength(0);
-		expect(bookmarksStore.add).toHaveBeenCalledTimes(1);
-		expect(bookmarksStore.update).not.toHaveBeenCalled();
+		expect(bookmarksStore.addMany).toHaveBeenCalledTimes(1);
+		expect((bookmarksStore.addMany as any).mock.calls[0][0]).toHaveLength(1);
+		expect(bookmarksStore.updateMany).toHaveBeenCalledWith([]);
 	});
 
 	it('should replace duplicate bookmarks when specified', async () => {
@@ -166,11 +175,11 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.bookmarksImported).toBe(0);
 		expect(result.bookmarksReplaced).toBe(1);
 		expect(result.errors).toHaveLength(0);
-		expect(bookmarksStore.update).toHaveBeenCalledTimes(1);
-		expect(bookmarksStore.add).not.toHaveBeenCalled();
+		expect(bookmarksStore.updateMany).toHaveBeenCalledTimes(1);
+		expect(bookmarksStore.addMany).toHaveBeenCalledWith([]);
 
 		// Verify the update keeps the original ID
-		const updateCall = (bookmarksStore.update as any).mock.calls[0][0];
+		const updateCall = (bookmarksStore.updateMany as any).mock.calls[0][0][0];
 		expect(updateCall.id).toBe('existing-1');
 		expect(updateCall.title).toBe('New Title');
 	});
@@ -202,7 +211,7 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.bookmarksImported).toBe(1);
 		expect(result.bookmarksSkipped).toBe(0);
 		expect(result.errors).toHaveLength(0);
-		expect(bookmarksStore.add).toHaveBeenCalledTimes(1);
+		expect(bookmarksStore.addMany).toHaveBeenCalledTimes(1);
 	});
 
 	it('should call progress callback with correct values', async () => {
@@ -237,7 +246,7 @@ describe('importBookmarksFromHTML', () => {
 
 	it('should handle errors during folder import gracefully', async () => {
 		// Make add throw error
-		(foldersStore.add as any).mockRejectedValueOnce(new Error('Database error'));
+		(foldersStore.addMany as any).mockRejectedValueOnce(new Error('Database error'));
 
 		const html = `
 			<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -255,12 +264,12 @@ describe('importBookmarksFromHTML', () => {
 		expect(result.foldersImported).toBe(0);
 		expect(result.bookmarksImported).toBe(1); // Bookmark should still import
 		expect(result.errors.length).toBeGreaterThan(0);
-		expect(result.errors[0]).toContain('Failed to import folder');
+		expect(result.errors[0]).toContain('Failed to import folders');
 	});
 
 	it('should handle errors during bookmark import gracefully', async () => {
-		// Make add throw error on first call
-		(bookmarksStore.add as any).mockRejectedValueOnce(new Error('Database error'));
+		// Make bulk add throw error
+		(bookmarksStore.addMany as any).mockRejectedValueOnce(new Error('Database error'));
 
 		const html = `
 			<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -273,9 +282,9 @@ describe('importBookmarksFromHTML', () => {
 		`;
 
 		const result = await importBookmarksFromHTML(html);
-		expect(result.bookmarksImported).toBe(1); // Second bookmark should still import
+		expect(result.bookmarksImported).toBe(0);
 		expect(result.errors.length).toBeGreaterThan(0);
-		expect(result.errors[0]).toContain('Failed to import bookmark');
+		expect(result.errors[0]).toContain('Failed to import bookmarks');
 	});
 
 	it('should include parsing errors in result', async () => {

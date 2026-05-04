@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseNetscapeBookmarks, validateBookmarkHTML } from './bookmarkParser';
+import { parseBookmarkFile, parseNetscapeBookmarks, validateBookmarkHTML } from './bookmarkParser';
 
 describe('validateBookmarkHTML', () => {
 	it('should return error for empty string', () => {
@@ -30,6 +30,59 @@ describe('validateBookmarkHTML', () => {
 		const result = validateBookmarkHTML('<HTML><HEAD></HEAD></HTML>');
 		expect(result.isValid).toBe(true);
 		expect(result.error).toBeUndefined();
+	});
+});
+
+describe('parseBookmarkFile', () => {
+	it('should parse CSV bookmark exports with folders and tags', () => {
+		const csv = `URL,Title,Folder,Tags,Description,Notes,Created At
+https://example.com,Example,Dev/Docs,"research, docs",Description,Note,2024-01-02T00:00:00.000Z`;
+
+		const result = parseBookmarkFile(csv, 'bookmarks.csv');
+
+		expect(result.format).toBe('csv');
+		expect(result.folders.map((folder) => folder.name)).toEqual(['Dev', 'Docs']);
+		expect(result.bookmarks).toHaveLength(1);
+		expect(result.bookmarks[0].description).toBe('Description');
+		expect(result.tagNamesByBookmarkId.get(result.bookmarks[0].id)).toEqual(['research', 'docs']);
+	});
+
+	it('should parse Chrome profile Bookmarks JSON', () => {
+		const json = JSON.stringify({
+			roots: {
+				bookmark_bar: {
+					type: 'folder',
+					name: 'Bookmarks Bar',
+					children: [
+						{
+							type: 'url',
+							name: 'GitHub',
+							url: 'https://github.com',
+							date_added: '13217451505204094'
+						}
+					]
+				}
+			}
+		});
+
+		const result = parseBookmarkFile(json, 'Bookmarks');
+
+		expect(result.format).toBe('chrome-json');
+		expect(result.folders[0].name).toBe('Bookmarks Bar');
+		expect(result.bookmarks).toHaveLength(1);
+		expect(result.bookmarks[0].title).toBe('GitHub');
+		expect(result.bookmarks[0].folderId).toBe(result.folders[0].id);
+	});
+
+	it('should parse plain URL lists', () => {
+		const result = parseBookmarkFile(
+			'https://example.com Example Site\nhttps://openai.com',
+			'urls.txt'
+		);
+
+		expect(result.format).toBe('url-list');
+		expect(result.bookmarks).toHaveLength(2);
+		expect(result.bookmarks[0].title).toBe('Example Site');
 	});
 });
 

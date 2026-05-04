@@ -75,6 +75,23 @@ function createTagsStore() {
 	}
 
 	/**
+	 * Add multiple tags in one IndexedDB transaction
+	 */
+	async function addMany(newTags: Tag[]): Promise<void> {
+		if (newTags.length === 0) return;
+		try {
+			await db.addMany(newTags);
+			tags = [...tags, ...newTags];
+			saveToLocalStorage(tags);
+		} catch (err) {
+			console.error('Failed to add tags to IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+			tags = [...tags, ...newTags];
+			saveToLocalStorage(tags);
+		}
+	}
+
+	/**
 	 * Update an existing tag
 	 */
 	async function update(updatedTag: Tag): Promise<void> {
@@ -165,6 +182,7 @@ function createTagsStore() {
 		},
 		load,
 		add,
+		addMany,
 		update,
 		remove,
 		getById,

@@ -110,6 +110,23 @@ function createBookmarksStore() {
 	}
 
 	/**
+	 * Add multiple bookmarks in one IndexedDB transaction
+	 */
+	async function addMany(newBookmarks: Bookmark[]): Promise<void> {
+		if (newBookmarks.length === 0) return;
+		try {
+			await db.addMany(newBookmarks);
+			bookmarks = [...bookmarks, ...newBookmarks];
+			saveToLocalStorage(bookmarks);
+		} catch (err) {
+			console.error('Failed to add bookmarks to IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+			bookmarks = [...bookmarks, ...newBookmarks];
+			saveToLocalStorage(bookmarks);
+		}
+	}
+
+	/**
 	 * Update an existing bookmark
 	 */
 	async function update(updatedBookmark: Bookmark): Promise<void> {
@@ -121,6 +138,25 @@ function createBookmarksStore() {
 			console.error('Failed to update bookmark in IndexedDB, using localStorage:', err);
 			error = 'Failed to save to database, using local backup';
 			bookmarks = bookmarks.map((b) => (b.id === updatedBookmark.id ? updatedBookmark : b));
+			saveToLocalStorage(bookmarks);
+		}
+	}
+
+	/**
+	 * Update multiple bookmarks in one IndexedDB transaction
+	 */
+	async function updateMany(updatedBookmarks: Bookmark[]): Promise<void> {
+		if (updatedBookmarks.length === 0) return;
+		try {
+			await db.updateMany(updatedBookmarks);
+			const updatedById = new Map(updatedBookmarks.map((bookmark) => [bookmark.id, bookmark]));
+			bookmarks = bookmarks.map((bookmark) => updatedById.get(bookmark.id) || bookmark);
+			saveToLocalStorage(bookmarks);
+		} catch (err) {
+			console.error('Failed to update bookmarks in IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+			const updatedById = new Map(updatedBookmarks.map((bookmark) => [bookmark.id, bookmark]));
+			bookmarks = bookmarks.map((bookmark) => updatedById.get(bookmark.id) || bookmark);
 			saveToLocalStorage(bookmarks);
 		}
 	}
@@ -382,7 +418,9 @@ function createBookmarksStore() {
 		},
 		load,
 		add,
+		addMany,
 		update,
+		updateMany,
 		remove,
 		getById,
 		getByFolderId,

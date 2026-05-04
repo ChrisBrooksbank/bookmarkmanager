@@ -76,6 +76,23 @@ function createFoldersStore() {
 	}
 
 	/**
+	 * Add multiple folders in one IndexedDB transaction
+	 */
+	async function addMany(newFolders: Folder[]): Promise<void> {
+		if (newFolders.length === 0) return;
+		try {
+			await db.addMany(newFolders);
+			folders = [...folders, ...newFolders];
+			saveToLocalStorage(folders);
+		} catch (err) {
+			console.error('Failed to add folders to IndexedDB, using localStorage:', err);
+			error = 'Failed to save to database, using local backup';
+			folders = [...folders, ...newFolders];
+			saveToLocalStorage(folders);
+		}
+	}
+
+	/**
 	 * Update an existing folder
 	 */
 	async function update(updatedFolder: Folder): Promise<void> {
@@ -205,6 +222,7 @@ function createFoldersStore() {
 		},
 		load,
 		add,
+		addMany,
 		update,
 		remove,
 		getById,
