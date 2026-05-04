@@ -3,6 +3,7 @@
 	import { foldersStore } from '$lib/stores/folders.svelte';
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { validateUrl as validateUrlUtil } from '$lib/utils/validation';
+	import { fetchPageMetadata } from '$lib/utils/metadata';
 	import type { Bookmark, Tag } from '$lib/types';
 
 	interface Props {
@@ -25,11 +26,20 @@
 	let showTagSuggestions = $state(false);
 	let submitting = $state(false);
 	let urlError = $state('');
+	let metadataLoading = $state(false);
+	let metadataError = $state('');
+	let lastMetadataUrl = $state('');
+	let faviconUrl = $state('');
+	let ogImage = $state('');
 
 	$effect(() => {
 		url = initialUrl;
 		title = initialTitle;
 		description = initialDescription;
+		metadataError = '';
+		lastMetadataUrl = '';
+		faviconUrl = '';
+		ogImage = '';
 	});
 
 	/**
@@ -145,7 +155,9 @@
 				folderId: folderId || undefined,
 				tags: selectedTagIds,
 				createdAt: now,
-				updatedAt: now
+				updatedAt: now,
+				faviconUrl: faviconUrl || undefined,
+				ogImage: ogImage || undefined
 			};
 
 			await bookmarksStore.add(bookmark);
@@ -159,6 +171,10 @@
 			selectedTagIds = [];
 			tagInput = '';
 			urlError = '';
+			metadataError = '';
+			lastMetadataUrl = '';
+			faviconUrl = '';
+			ogImage = '';
 
 			// Close modal if callback provided
 			if (onClose) {
@@ -177,7 +193,10 @@
 	 */
 	function handleUrlBlur() {
 		if (url.trim()) {
-			validateUrl(url);
+			const isValid = validateUrl(url);
+			if (isValid) {
+				void fetchMetadata();
+			}
 		}
 	}
 
@@ -187,6 +206,39 @@
 	function handleUrlInput() {
 		if (urlError) {
 			urlError = '';
+		}
+		if (metadataError) {
+			metadataError = '';
+		}
+	}
+
+	async function fetchMetadata() {
+		const trimmedUrl = url.trim();
+		if (!trimmedUrl || !validateUrl(trimmedUrl) || trimmedUrl === lastMetadataUrl) {
+			return;
+		}
+
+		metadataLoading = true;
+		metadataError = '';
+
+		try {
+			const metadata = await fetchPageMetadata(trimmedUrl);
+
+			if (!title.trim()) {
+				title = metadata.title;
+			}
+			if (!description.trim() && metadata.description) {
+				description = metadata.description;
+			}
+
+			faviconUrl = metadata.faviconUrl || '';
+			ogImage = metadata.ogImage || '';
+			lastMetadataUrl = trimmedUrl;
+		} catch (error) {
+			console.error('Failed to fetch bookmark metadata:', error);
+			metadataError = 'Could not fetch page details';
+		} finally {
+			metadataLoading = false;
 		}
 	}
 </script>
@@ -203,21 +255,35 @@
 		<label for="url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 			URL *
 		</label>
-		<input
-			type="text"
-			id="url"
-			bind:value={url}
-			oninput={handleUrlInput}
-			onblur={handleUrlBlur}
-			placeholder="https://example.com"
-			class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent {urlError
-				? 'border-red-500 dark:border-red-500'
-				: 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-			disabled={submitting}
-			required
-		/>
+		<div class="flex gap-2">
+			<input
+				type="text"
+				id="url"
+				bind:value={url}
+				oninput={handleUrlInput}
+				onblur={handleUrlBlur}
+				placeholder="https://example.com"
+				class="flex-1 min-w-0 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent {urlError
+					? 'border-red-500 dark:border-red-500'
+					: 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+				disabled={submitting}
+				required
+			/>
+			<button
+				type="button"
+				onclick={fetchMetadata}
+				disabled={submitting || metadataLoading || !url.trim()}
+				class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+			>
+				{metadataLoading ? 'Fetching...' : 'Fetch'}
+			</button>
+		</div>
 		{#if urlError}
 			<p class="mt-1 text-sm text-red-600 dark:text-red-400">{urlError}</p>
+		{:else if metadataError}
+			<p class="mt-1 text-sm text-amber-600 dark:text-amber-400">{metadataError}</p>
+		{:else if lastMetadataUrl}
+			<p class="mt-1 text-sm text-green-600 dark:text-green-400">Page details loaded</p>
 		{/if}
 	</div>
 
