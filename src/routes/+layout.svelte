@@ -18,6 +18,7 @@
 	import { onMount, setContext } from 'svelte';
 	import { browser } from '$app/environment';
 	import { createShortcutHandler, getDefaultShortcuts } from '$lib/utils/keyboard';
+	import { matchesBookmarkSearch } from '$lib/utils/bookmarkSearch';
 	import type { Folder, Bookmark } from '$lib/types';
 
 	let { children } = $props();
@@ -43,6 +44,14 @@
 
 	// Expanded folders state
 	let expandedFolders = $state<Set<string>>(new Set());
+
+	let tagsById = $derived(new Map(tagsStore.items.map((tag) => [tag.id, tag])));
+	let foldersById = $derived(new Map(foldersStore.items.map((folder) => [folder.id, folder])));
+	let selectedBookmarks = $derived(
+		bookmarksStore.items.filter((bookmark) =>
+			uiStateStore.selectedBookmarkIds.includes(bookmark.id)
+		)
+	);
 
 	// Load stores on mount
 	onMount(() => {
@@ -141,12 +150,8 @@
 
 		// Filter by search query if present
 		if (uiStateStore.searchQuery.trim() !== '') {
-			const lowerQuery = uiStateStore.searchQuery.toLowerCase();
-			results = results.filter(
-				(b) =>
-					b.title.toLowerCase().includes(lowerQuery) ||
-					b.url.toLowerCase().includes(lowerQuery) ||
-					(b.description && b.description.toLowerCase().includes(lowerQuery))
+			results = results.filter((bookmark) =>
+				matchesBookmarkSearch(bookmark, uiStateStore.searchQuery, { tagsById, foldersById })
 			);
 		}
 
@@ -560,7 +565,7 @@
 			<div class="flex items-center gap-3">
 				<!-- Search Bar -->
 				<div class="flex-1">
-					<SearchBar />
+					<SearchBar placeholder="Search title, URL, tags, folders, notes..." />
 				</div>
 
 				<!-- Date Range Filter -->
@@ -595,7 +600,12 @@
 
 				<!-- Import and Export Menus -->
 				<ImportMenu />
-				<ExportMenu bookmarks={filteredBookmarks} folders={foldersStore.items} />
+				<ExportMenu
+					{filteredBookmarks}
+					allBookmarks={bookmarksStore.items}
+					{selectedBookmarks}
+					folders={foldersStore.items}
+				/>
 			</div>
 		</header>
 

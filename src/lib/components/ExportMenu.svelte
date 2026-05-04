@@ -7,9 +7,32 @@
 	} from '$lib/utils/exportBookmarks';
 	import { browser } from '$app/environment';
 
-	let { bookmarks, folders }: { bookmarks: Bookmark[]; folders: Folder[] } = $props();
+	let {
+		filteredBookmarks,
+		allBookmarks,
+		selectedBookmarks = [],
+		folders
+	}: {
+		filteredBookmarks: Bookmark[];
+		allBookmarks: Bookmark[];
+		selectedBookmarks?: Bookmark[];
+		folders: Folder[];
+	} = $props();
 
 	let isOpen = $state(false);
+	let exportScope = $state<'filtered' | 'selected' | 'all'>('filtered');
+
+	let hasSelected = $derived(selectedBookmarks.length > 0);
+	let scopedBookmarks = $derived.by(() => {
+		if (exportScope === 'selected' && hasSelected) return selectedBookmarks;
+		if (exportScope === 'all') return allBookmarks;
+		return filteredBookmarks;
+	});
+	let scopeLabel = $derived.by(() => {
+		if (exportScope === 'selected' && hasSelected) return 'selected';
+		if (exportScope === 'all') return 'all';
+		return 'filtered';
+	});
 
 	function toggleDropdown() {
 		isOpen = !isOpen;
@@ -21,21 +44,27 @@
 
 	function handleExportHTML() {
 		const filename = `bookmarks-${new Date().toISOString().split('T')[0]}.html`;
-		downloadBookmarksHTML(bookmarks, folders, filename);
+		downloadBookmarksHTML(scopedBookmarks, folders, filename);
 		closeDropdown();
 	}
 
 	function handleExportJSON() {
 		const filename = `bookmarks-${new Date().toISOString().split('T')[0]}.json`;
-		downloadBookmarksJSON(bookmarks, folders, filename);
+		downloadBookmarksJSON(scopedBookmarks, folders, filename);
 		closeDropdown();
 	}
 
 	function handleExportCSV() {
 		const filename = `bookmarks-${new Date().toISOString().split('T')[0]}.csv`;
-		downloadBookmarksCSV(bookmarks, folders, filename);
+		downloadBookmarksCSV(scopedBookmarks, folders, filename);
 		closeDropdown();
 	}
+
+	$effect(() => {
+		if (exportScope === 'selected' && !hasSelected) {
+			exportScope = 'filtered';
+		}
+	});
 
 	// Close dropdown when clicking outside
 	function handleClickOutside(event: MouseEvent) {
@@ -64,7 +93,7 @@
 		aria-label="Export bookmarks"
 		aria-expanded={isOpen}
 		aria-haspopup="true"
-		disabled={bookmarks.length === 0}
+		disabled={allBookmarks.length === 0}
 	>
 		<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path
@@ -90,18 +119,54 @@
 
 	{#if isOpen}
 		<div
-			class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
+			class="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
 			role="menu"
 			aria-orientation="vertical"
 		>
 			<div class="py-1">
 				<div class="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
-					Export {bookmarks.length}
-					{bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
+					Export {scopedBookmarks.length}
+					{scopeLabel}
+					{scopedBookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
+				</div>
+				<div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
+					<label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+						<input
+							type="radio"
+							bind:group={exportScope}
+							value="filtered"
+							class="h-4 w-4 text-blue-600"
+						/>
+						Filtered results ({filteredBookmarks.length})
+					</label>
+					<label
+						class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 {hasSelected
+							? ''
+							: 'opacity-50'}"
+					>
+						<input
+							type="radio"
+							bind:group={exportScope}
+							value="selected"
+							disabled={!hasSelected}
+							class="h-4 w-4 text-blue-600"
+						/>
+						Selected bookmarks ({selectedBookmarks.length})
+					</label>
+					<label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+						<input
+							type="radio"
+							bind:group={exportScope}
+							value="all"
+							class="h-4 w-4 text-blue-600"
+						/>
+						All bookmarks ({allBookmarks.length})
+					</label>
 				</div>
 				<button
 					onclick={handleExportHTML}
-					class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-start gap-3"
+					disabled={scopedBookmarks.length === 0}
+					class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex items-start gap-3"
 					role="menuitem"
 				>
 					<svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -116,7 +181,8 @@
 				</button>
 				<button
 					onclick={handleExportJSON}
-					class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-start gap-3"
+					disabled={scopedBookmarks.length === 0}
+					class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex items-start gap-3"
 					role="menuitem"
 				>
 					<svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -131,7 +197,8 @@
 				</button>
 				<button
 					onclick={handleExportCSV}
-					class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-start gap-3"
+					disabled={scopedBookmarks.length === 0}
+					class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 flex items-start gap-3"
 					role="menuitem"
 				>
 					<svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
