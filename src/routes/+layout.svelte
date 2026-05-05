@@ -157,7 +157,11 @@
 
 		// Filter by folder if one is selected
 		if (uiStateStore.selectedFolderId !== null) {
-			results = results.filter((b) => b.folderId === uiStateStore.selectedFolderId);
+			const selectedFolderIds = new Set([
+				uiStateStore.selectedFolderId,
+				...foldersStore.getDescendants(uiStateStore.selectedFolderId).map((folder) => folder.id)
+			]);
+			results = results.filter((b) => b.folderId && selectedFolderIds.has(b.folderId));
 		}
 
 		// Filter by tags if any are selected (AND logic - bookmark must have ALL selected tags)

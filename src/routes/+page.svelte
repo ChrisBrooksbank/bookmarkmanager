@@ -3,6 +3,7 @@
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
 	import BookmarkCard from '$lib/components/BookmarkCard.svelte';
 	import BookmarkList from '$lib/components/BookmarkList.svelte';
+	import CleanupDashboard from '$lib/components/CleanupDashboard.svelte';
 	import BulkTagMenu from '$lib/components/BulkTagMenu.svelte';
 	import BulkFolderMenu from '$lib/components/BulkFolderMenu.svelte';
 	import BulkDeleteButton from '$lib/components/BulkDeleteButton.svelte';
@@ -19,6 +20,8 @@
 </script>
 
 <div class="max-w-7xl mx-auto">
+	<CleanupDashboard />
+
 	<!-- Selection Toolbar -->
 	{#if uiStateStore.selectedBookmarkIds.length > 0}
 		<div

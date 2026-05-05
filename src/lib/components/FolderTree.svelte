@@ -1,5 +1,6 @@
 <script lang="ts">
 	import FolderTree from './FolderTree.svelte';
+	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
 	import { foldersStore } from '$lib/stores/folders.svelte';
 	import type { Folder } from '$lib/types';
 
@@ -59,6 +60,16 @@
 		return foldersStore.getChildren(folderId).length > 0;
 	}
 
+	function getFolderBookmarkCount(folderId: string): number {
+		const folderIds = new Set([
+			folderId,
+			...foldersStore.getDescendants(folderId).map((folder) => folder.id)
+		]);
+		return bookmarksStore.items.filter(
+			(bookmark) => bookmark.folderId && folderIds.has(bookmark.folderId)
+		).length;
+	}
+
 	/**
 	 * State to track which folder's actions are shown
 	 */
@@ -96,12 +107,16 @@
 			<!-- Folder Button -->
 			<button
 				onclick={() => handleSelectFolder(folder.id)}
-				class="flex-1 text-left px-3 py-2 rounded-lg text-sm transition-colors {selectedFolderId ===
+				title="{folder.name} ({getFolderBookmarkCount(folder.id)} bookmarks including subfolders)"
+				class="flex-1 min-w-0 text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 {selectedFolderId ===
 				folder.id
 					? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
 					: 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}"
 			>
-				📁 {folder.name}
+				<span class="truncate">📁 {folder.name}</span>
+				<span class="ml-auto text-xs text-gray-500 dark:text-gray-400">
+					{getFolderBookmarkCount(folder.id)}
+				</span>
 			</button>
 
 			<!-- Action Buttons (shown on hover) -->
