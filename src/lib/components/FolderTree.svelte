@@ -37,7 +37,11 @@
 	/**
 	 * Get folders for the current parent
 	 */
-	let folders = $derived(foldersStore.getByParentId(parentId));
+	let folders = $derived(
+		[...foldersStore.getByParentId(parentId)].sort((a, b) =>
+			a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+		)
+	);
 
 	/**
 	 * Handle folder selection

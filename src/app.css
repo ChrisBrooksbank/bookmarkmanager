@@ -2,4 +2,9 @@
 
 @source './**/*.{html,js,svelte,ts}';
 
-/* Dark mode is supported via the 'dark' variant (class-based) */
+/*
+ * Class-based dark mode: the theme toggle adds/removes `.dark` on <html>.
+ * Tailwind v4 ignores `darkMode` in tailwind.config.js and defaults the `dark:`
+ * variant to prefers-color-scheme, so it has to be declared here.
+ */
+@custom-variant dark (&:where(.dark, .dark *));

@@ -47,6 +47,11 @@
 	const expandedFolders = new SvelteSet<string>();
 
 	let tagsById = $derived(new Map(tagsStore.items.map((tag) => [tag.id, tag])));
+	let sortedTags = $derived(
+		[...tagsStore.items].sort((a, b) =>
+			a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+		)
+	);
 	let foldersById = $derived(new Map(foldersStore.items.map((folder) => [folder.id, folder])));
 	let selectedBookmarks = $derived(
 		bookmarksStore.items.filter((bookmark) =>
@@ -437,7 +442,7 @@
 					{:else if tagsStore.items.length === 0}
 						<div class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2">No tags yet</div>
 					{:else}
-						{#each tagsStore.items as tag (tag.id)}
+						{#each sortedTags as tag (tag.id)}
 							<button
 								onclick={() => toggleTag(tag.id)}
 								class="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 {uiStateStore.selectedTagIds.includes(
@@ -488,7 +493,7 @@
 	{#if sidebarOpen}
 		<button
 			onclick={toggleSidebar}
-			class="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
+			class="fixed inset-0 bg-black/50 z-10 md:hidden"
 			aria-label="Close sidebar"
 		></button>
 	{/if}
@@ -665,7 +670,7 @@
 <!-- Delete Folder Confirmation Modal -->
 {#if deleteFolderModalOpen && folderToDelete}
 	<div
-		class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+		class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
 		role="presentation"
 	>
 		<div

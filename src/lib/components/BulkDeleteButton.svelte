@@ -65,7 +65,7 @@
 		>
 			<button
 				type="button"
-				class="absolute inset-0 bg-black bg-opacity-50"
+				class="absolute inset-0 bg-black/50"
 				aria-label="Cancel bulk delete"
 				onclick={cancelDelete}
 			></button>
