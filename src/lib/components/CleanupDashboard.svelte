@@ -10,7 +10,7 @@
 		getDuplicateGroups,
 		getStaleCandidates,
 		getSuggestedTagGroups,
-		normalizeUrlForComparison,
+		removeTrackingParams,
 		type LinkHealthResult,
 		type LinkHealthStatus
 	} from '$lib/utils/bookmarkAudit';
@@ -45,9 +45,7 @@
 			.map((result) => result.bookmarkId)
 	);
 	let normalizedBookmarks = $derived(
-		bookmarksStore.items.filter(
-			(bookmark) => normalizeUrlForComparison(bookmark.url) !== bookmark.url
-		)
+		bookmarksStore.items.filter((bookmark) => removeTrackingParams(bookmark.url) !== bookmark.url)
 	);
 
 	function setTab(tab: CleanupTab) {
@@ -127,7 +125,7 @@
 	async function normalizeTrackingUrls() {
 		const updated = normalizedBookmarks.map((bookmark) => ({
 			...bookmark,
-			url: normalizeUrlForComparison(bookmark.url),
+			url: removeTrackingParams(bookmark.url),
 			updatedAt: Date.now()
 		}));
 		await bookmarksStore.updateMany(updated);

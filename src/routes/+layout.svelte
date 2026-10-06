@@ -597,6 +597,7 @@
 					allBookmarks={bookmarksStore.items}
 					{selectedBookmarks}
 					folders={foldersStore.items}
+					tags={tagsStore.items}
 				/>
 			</div>
 		</header>

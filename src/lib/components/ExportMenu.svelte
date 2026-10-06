@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { Bookmark, Folder } from '$lib/types';
+	import type { Bookmark, Folder, Tag } from '$lib/types';
 	import {
+		getFoldersForBookmarks,
 		downloadBookmarksHTML,
 		downloadBookmarksJSON,
 		downloadBookmarksCSV
@@ -11,12 +12,14 @@
 		filteredBookmarks,
 		allBookmarks,
 		selectedBookmarks = [],
-		folders
+		folders,
+		tags = []
 	}: {
 		filteredBookmarks: Bookmark[];
 		allBookmarks: Bookmark[];
 		selectedBookmarks?: Bookmark[];
 		folders: Folder[];
+		tags?: Tag[];
 	} = $props();
 
 	let isOpen = $state(false);
@@ -28,6 +31,10 @@
 		if (exportScope === 'all') return allBookmarks;
 		return filteredBookmarks;
 	});
+	// Full exports keep empty folders; partial exports only include folders they use
+	let scopedFolders = $derived(
+		exportScope === 'all' ? folders : getFoldersForBookmarks(scopedBookmarks, folders)
+	);
 	let scopeLabel = $derived.by(() => {
 		if (exportScope === 'selected' && hasSelected) return 'selected';
 		if (exportScope === 'all') return 'all';
@@ -44,19 +51,19 @@
 
 	function handleExportHTML() {
 		const filename = `bookmarks-${new Date().toISOString().split('T')[0]}.html`;
-		downloadBookmarksHTML(scopedBookmarks, folders, filename);
+		downloadBookmarksHTML(scopedBookmarks, scopedFolders, filename, { tags });
 		closeDropdown();
 	}
 
 	function handleExportJSON() {
 		const filename = `bookmarks-${new Date().toISOString().split('T')[0]}.json`;
-		downloadBookmarksJSON(scopedBookmarks, folders, filename);
+		downloadBookmarksJSON(scopedBookmarks, scopedFolders, filename, tags);
 		closeDropdown();
 	}
 
 	function handleExportCSV() {
 		const filename = `bookmarks-${new Date().toISOString().split('T')[0]}.csv`;
-		downloadBookmarksCSV(scopedBookmarks, folders, filename);
+		downloadBookmarksCSV(scopedBookmarks, scopedFolders, filename, tags);
 		closeDropdown();
 	}
 
