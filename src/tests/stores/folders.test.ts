@@ -243,6 +243,16 @@ describe('foldersStore', () => {
 			expect(children.map((f) => f.id)).toContain(child3.id);
 		});
 
+		it('should treat folders without a parentId as root folders', async () => {
+			const legacyRoot = createTestFolder();
+			delete legacyRoot.parentId;
+
+			await db.add(legacyRoot);
+			await foldersStore.load();
+
+			expect(foldersStore.getByParentId(null).map((f) => f.id)).toContain(legacyRoot.id);
+		});
+
 		it('should return root folders when parentId is null', async () => {
 			const root1 = createTestFolder({ parentId: null });
 			const root2 = createTestFolder({ parentId: null });

@@ -332,6 +332,7 @@ function createBookmarksStore() {
 	 * Move multiple bookmarks to a folder
 	 */
 	async function bulkMoveToFolder(bookmarkIds: string[], folderId: string | null): Promise<void> {
+		if (bookmarkIds.length === 0) return;
 		try {
 			const updatedBookmarks: Bookmark[] = [];
 			const bookmarkIdSet = new Set(bookmarkIds);

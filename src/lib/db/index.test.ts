@@ -96,6 +96,21 @@ describe('IndexedDB Wrapper', () => {
 			expect(result.map((b) => b.id).sort()).toEqual(['b1', 'b2']);
 		});
 
+		it('should store reactive proxy values (e.g. Svelte $state) without DataCloneError', async () => {
+			const proxied = new Proxy(
+				{ ...mockBookmark, tags: new Proxy(['tag-1'], {}) },
+				{}
+			) as Bookmark;
+
+			await bookmarks.add(proxied);
+			await bookmarks.update(new Proxy({ ...proxied, title: 'Updated' }, {}) as Bookmark);
+			await bookmarks.updateMany([new Proxy({ ...proxied, title: 'Bulk' }, {}) as Bookmark]);
+
+			const result = await bookmarks.getById(mockBookmark.id);
+			expect(result?.title).toBe('Bulk');
+			expect(result?.tags).toEqual(['tag-1']);
+		});
+
 		it('should return undefined for non-existent bookmark', async () => {
 			const result = await bookmarks.getById('non-existent');
 			expect(result).toBeUndefined();

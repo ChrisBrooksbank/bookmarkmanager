@@ -135,7 +135,7 @@ function createFoldersStore() {
 	 * Get folders by parent ID (for nested hierarchy)
 	 */
 	function getByParentId(parentId: string | null): Folder[] {
-		return folders.filter((f) => f.parentId === parentId);
+		return folders.filter((f) => (f.parentId ?? null) === parentId);
 	}
 
 	/**
@@ -159,9 +159,17 @@ function createFoldersStore() {
 		const descendants: Folder[] = [];
 		const directChildren = getChildren(folderId);
 
-		for (const child of directChildren) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, non-reactive scratch set
+		const seen = new Set<string>([folderId]);
+		const queue = [...directChildren];
+
+		// Iterative walk with a visited set so cyclic parent chains can't recurse forever
+		while (queue.length > 0) {
+			const child = queue.shift()!;
+			if (seen.has(child.id)) continue;
+			seen.add(child.id);
 			descendants.push(child);
-			descendants.push(...getDescendants(child.id));
+			queue.push(...getChildren(child.id));
 		}
 
 		return descendants;
@@ -172,9 +180,13 @@ function createFoldersStore() {
 	 */
 	function getPath(folderId: string): string[] {
 		const path: string[] = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, non-reactive scratch set
+		const seen = new Set<string>();
 		let currentFolder = getById(folderId);
 
-		while (currentFolder) {
+		// Guard against corrupt (cyclic) parent chains, e.g. from imported data
+		while (currentFolder && !seen.has(currentFolder.id)) {
+			seen.add(currentFolder.id);
 			path.unshift(currentFolder.id);
 			currentFolder = currentFolder.parentId ? getById(currentFolder.parentId) : undefined;
 		}

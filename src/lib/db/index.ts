@@ -18,6 +18,25 @@ const STORES = {
 let cachedDBPromise: Promise<IDBDatabase> | null = null;
 
 /**
+ * Deep-copy a value into plain objects and arrays before handing it to IndexedDB.
+ * Svelte 5 `$state` values are Proxies, which the structured clone algorithm
+ * rejects with a DataCloneError.
+ */
+function toPlainData<T>(value: T): T {
+	if (Array.isArray(value)) {
+		return value.map((item) => toPlainData(item)) as T;
+	}
+	if (value !== null && typeof value === 'object') {
+		const plain: Record<string, unknown> = {};
+		for (const [key, entry] of Object.entries(value)) {
+			plain[key] = toPlainData(entry);
+		}
+		return plain as T;
+	}
+	return value;
+}
+
+/**
  * Initialize the IndexedDB database with schema
  */
 function initDB(): Promise<IDBDatabase> {
@@ -132,7 +151,7 @@ async function getById<T>(storeName: string, id: string): Promise<T | undefined>
  * Generic helper to add an item
  */
 async function add<T>(storeName: string, item: T): Promise<IDBValidKey> {
-	return performTransaction(storeName, 'readwrite', (store) => store.add(item));
+	return performTransaction(storeName, 'readwrite', (store) => store.add(toPlainData(item)));
 }
 
 /**
@@ -142,7 +161,7 @@ async function addMany<T>(storeName: string, items: T[]): Promise<void> {
 	if (items.length === 0) return;
 	return performWriteTransaction(storeName, (store) => {
 		for (const item of items) {
-			store.add(item);
+			store.add(toPlainData(item));
 		}
 	});
 }
@@ -151,7 +170,7 @@ async function addMany<T>(storeName: string, items: T[]): Promise<void> {
  * Generic helper to update an item
  */
 async function update<T>(storeName: string, item: T): Promise<IDBValidKey> {
-	return performTransaction(storeName, 'readwrite', (store) => store.put(item));
+	return performTransaction(storeName, 'readwrite', (store) => store.put(toPlainData(item)));
 }
 
 /**
@@ -161,7 +180,7 @@ async function updateMany<T>(storeName: string, items: T[]): Promise<void> {
 	if (items.length === 0) return;
 	return performWriteTransaction(storeName, (store) => {
 		for (const item of items) {
-			store.put(item);
+			store.put(toPlainData(item));
 		}
 	});
 }

@@ -16,6 +16,7 @@
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
 	import { onMount, setContext } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { browser } from '$app/environment';
 	import { createShortcutHandler, getDefaultShortcuts } from '$lib/utils/keyboard';
 	import { matchesBookmarkSearch } from '$lib/utils/bookmarkSearch';
@@ -43,7 +44,7 @@
 	let parentIdForNewFolder = $state<string | null>(null);
 
 	// Expanded folders state
-	let expandedFolders = $state<Set<string>>(new Set());
+	const expandedFolders = new SvelteSet<string>();
 
 	let tagsById = $derived(new Map(tagsStore.items.map((tag) => [tag.id, tag])));
 	let foldersById = $derived(new Map(foldersStore.items.map((folder) => [folder.id, folder])));
@@ -68,9 +69,11 @@
 			const description = params.get('description');
 
 			if (url) {
-				urlParam = decodeURIComponent(url);
-				titleParam = title ? decodeURIComponent(title) : '';
-				descriptionParam = description ? decodeURIComponent(description) : '';
+				// URLSearchParams already percent-decodes values; decoding again corrupts
+				// URLs containing "%" and throws URIError on sequences like "100%".
+				urlParam = url;
+				titleParam = title ?? '';
+				descriptionParam = description ?? '';
 				// Open the add bookmark modal with pre-filled data
 				addBookmarkModalOpen = true;
 
@@ -238,7 +241,6 @@
 		} else {
 			expandedFolders.add(folderId);
 		}
-		expandedFolders = expandedFolders;
 	}
 
 	function cycleTheme() {
@@ -292,41 +294,27 @@
 		if (!folderToDelete) return;
 
 		try {
-			// Move all bookmarks in this folder and descendant folders to root
-			const descendantIds = [
-				folderToDelete.id,
-				...foldersStore.getDescendants(folderToDelete.id).map((f) => f.id)
-			];
-
-			// Load bookmarks if not already loaded
-			if (bookmarksStore.items.length === 0) {
-				await bookmarksStore.load();
-			}
-
-			// Update bookmarks that are in the deleted folder or its descendants
-			const bookmarksToUpdate = bookmarksStore.items.filter(
-				(b) => b.folderId && descendantIds.includes(b.folderId)
-			);
-
-			for (const bookmark of bookmarksToUpdate) {
-				await bookmarksStore.update({
-					...bookmark,
-					folderId: null
-				});
-			}
-
-			// Delete all descendant folders first
 			const descendants = foldersStore.getDescendants(folderToDelete.id);
-			for (const descendant of descendants) {
+			const deletedFolderIds = new Set([folderToDelete.id, ...descendants.map((f) => f.id)]);
+
+			// Move bookmarks in the deleted folder tree back to the root
+			const bookmarkIdsToMove = bookmarksStore.items
+				.filter((b) => b.folderId && deletedFolderIds.has(b.folderId))
+				.map((b) => b.id);
+			await bookmarksStore.bulkMoveToFolder(bookmarkIdsToMove, null);
+
+			// Delete descendants (deepest first) and then the folder itself
+			for (const descendant of [...descendants].reverse()) {
 				await foldersStore.remove(descendant.id);
 			}
-
-			// Delete the folder itself
 			await foldersStore.remove(folderToDelete.id);
 
-			// If the deleted folder was selected, deselect it
-			if (uiStateStore.selectedFolderId === folderToDelete.id) {
+			// Deselect if the selected folder was removed (including any subfolder)
+			if (uiStateStore.selectedFolderId && deletedFolderIds.has(uiStateStore.selectedFolderId)) {
 				uiStateStore.setSelectedFolderId(null);
+			}
+			for (const folderId of deletedFolderIds) {
+				expandedFolders.delete(folderId);
 			}
 
 			closeDeleteFolderModal();
