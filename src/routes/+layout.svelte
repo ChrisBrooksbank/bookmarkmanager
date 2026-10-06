@@ -17,15 +17,15 @@
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
 	import { onMount, setContext } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { browser } from '$app/environment';
+	import { browser, dev } from '$app/environment';
 	import { createShortcutHandler, getDefaultShortcuts } from '$lib/utils/keyboard';
 	import { matchesBookmarkSearch } from '$lib/utils/bookmarkSearch';
 	import type { Folder, Bookmark } from '$lib/types';
 
 	let { children } = $props();
 
-	// Sidebar state
-	let sidebarOpen = $state(true);
+	// Sidebar state (only affects small screens; the sidebar is always visible from md up)
+	let sidebarOpen = $state(false);
 
 	// Modal state
 	let addBookmarkModalOpen = $state(false);
@@ -53,6 +53,34 @@
 			uiStateStore.selectedBookmarkIds.includes(bookmark.id)
 		)
 	);
+
+	// Drop selections and filters that point at deleted bookmarks, folders or tags
+	$effect(() => {
+		if (bookmarksStore.loading) return;
+		const selectedIds = uiStateStore.selectedBookmarkIds;
+		if (selectedIds.length === 0) return;
+		const existingIds = new Set(bookmarksStore.items.map((bookmark) => bookmark.id));
+		const stillPresent = selectedIds.filter((id) => existingIds.has(id));
+		if (stillPresent.length !== selectedIds.length) {
+			uiStateStore.selectBookmarks(stillPresent);
+		}
+	});
+
+	$effect(() => {
+		if (foldersStore.loading) return;
+		const folderId = uiStateStore.selectedFolderId;
+		if (folderId && !foldersById.has(folderId)) {
+			uiStateStore.setSelectedFolderId(null);
+		}
+	});
+
+	$effect(() => {
+		if (tagsStore.loading) return;
+		const tagIds = uiStateStore.selectedTagIds;
+		if (tagIds.length > 0 && tagIds.some((tagId) => !tagsById.has(tagId))) {
+			uiStateStore.setSelectedTagIds(tagIds.filter((tagId) => tagsById.has(tagId)));
+		}
+	});
 
 	// Load stores on mount
 	onMount(() => {
@@ -84,28 +112,34 @@
 
 		// Register service worker update handler
 		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-				// Check for updates periodically
-				setInterval(
-					() => {
-						registration.update();
-					},
-					60 * 60 * 1000
-				); // Check every hour
+			// In dev, SvelteKit serves the service worker as an ES module
+			navigator.serviceWorker
+				.register('/service-worker.js', { type: dev ? 'module' : 'classic' })
+				.then((registration) => {
+					// Check for updates periodically
+					setInterval(
+						() => {
+							registration.update();
+						},
+						60 * 60 * 1000
+					); // Check every hour
 
-				// Listen for new service worker
-				registration.addEventListener('updatefound', () => {
-					const newWorker = registration.installing;
-					if (newWorker) {
-						newWorker.addEventListener('statechange', () => {
-							if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-								// New service worker is ready, notify user
-								console.log('New version available. Refresh to update.');
-							}
-						});
-					}
+					// Listen for new service worker
+					registration.addEventListener('updatefound', () => {
+						const newWorker = registration.installing;
+						if (newWorker) {
+							newWorker.addEventListener('statechange', () => {
+								if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+									// New service worker is ready, notify user
+									console.log('New version available. Refresh to update.');
+								}
+							});
+						}
+					});
+				})
+				.catch((error) => {
+					console.warn('Service worker registration failed:', error);
 				});
-			});
 		}
 	});
 
@@ -331,7 +365,7 @@
 <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
 	<!-- Sidebar -->
 	<aside
-		class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 {sidebarOpen
+		class="fixed inset-y-0 left-0 z-20 md:static md:z-auto w-64 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 {sidebarOpen
 			? 'translate-x-0'
 			: '-translate-x-full'} md:translate-x-0"
 	>

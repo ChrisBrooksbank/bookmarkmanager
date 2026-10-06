@@ -63,6 +63,30 @@ const DEFAULT_STATE: UIState = {
 };
 
 /**
+ * Preferences that survive a reload. Search, folder/tag filters and bookmark
+ * selection are session-only and must never be written to storage.
+ */
+type PersistedUIState = Pick<UIState, 'viewMode' | 'sortBy' | 'dateRange' | 'themeMode'>;
+
+const VALID_VALUES: { [K in keyof PersistedUIState]: readonly PersistedUIState[K][] } = {
+	viewMode: ['grid', 'list', 'compact'],
+	sortBy: ['newest', 'oldest', 'alphabetical', 'recently-updated'],
+	dateRange: ['all', 'last-7-days', 'last-30-days', 'last-90-days'],
+	themeMode: ['light', 'dark', 'system']
+};
+
+function pickPersisted(source: Partial<Record<string, unknown>>): Partial<PersistedUIState> {
+	const picked: Partial<Record<keyof PersistedUIState, unknown>> = {};
+	for (const key of Object.keys(VALID_VALUES) as (keyof PersistedUIState)[]) {
+		const value = source[key];
+		if ((VALID_VALUES[key] as readonly unknown[]).includes(value)) {
+			picked[key] = value;
+		}
+	}
+	return picked as Partial<PersistedUIState>;
+}
+
+/**
  * Try to load UI state from localStorage
  */
 function loadFromLocalStorage(): UIState {
@@ -70,10 +94,10 @@ function loadFromLocalStorage(): UIState {
 		const data = localStorage.getItem(STORAGE_KEY);
 		if (data) {
 			const parsed = JSON.parse(data);
-			// Validate and merge with defaults to handle missing fields
+			// Only restore known preference fields with valid values
 			return {
 				...DEFAULT_STATE,
-				...parsed
+				...(parsed && typeof parsed === 'object' ? pickPersisted(parsed) : {})
 			};
 		}
 	} catch (error) {
@@ -83,11 +107,11 @@ function loadFromLocalStorage(): UIState {
 }
 
 /**
- * Try to save UI state to localStorage
+ * Try to save UI preferences to localStorage
  */
 function saveToLocalStorage(state: UIState): void {
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(pickPersisted({ ...state })));
 	} catch (error) {
 		console.error('Failed to save UI state to localStorage:', error);
 	}
@@ -230,7 +254,7 @@ function createUIStateStore() {
 	 * Reset all UI state to defaults
 	 */
 	function reset(): void {
-		state = { ...DEFAULT_STATE };
+		state = { ...DEFAULT_STATE, selectedTagIds: [], selectedBookmarkIds: [] };
 		saveToLocalStorage(state);
 	}
 
