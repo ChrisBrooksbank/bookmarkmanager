@@ -1,4 +1,35 @@
-import type { Bookmark, Folder } from '$lib/types';
+import type { Bookmark, Folder, Tag } from '$lib/types';
+
+/**
+ * Resolve a bookmark's tag IDs to display names. Unknown IDs fall back to the raw ID
+ * so nothing is silently dropped.
+ */
+function getTagNames(bookmark: Bookmark, tags: Tag[]): string[] {
+	if (tags.length === 0) return [...bookmark.tags];
+	const tagsById = new Map(tags.map((tag) => [tag.id, tag.name]));
+	return bookmark.tags.map((tagId) => tagsById.get(tagId) ?? tagId);
+}
+
+/**
+ * Keep only the folders needed to place the given bookmarks (their folders and ancestors).
+ * Useful when exporting a filtered or selected subset.
+ */
+export function getFoldersForBookmarks(bookmarks: Bookmark[], folders: Folder[]): Folder[] {
+	const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
+	const neededIds = new Set<string>();
+
+	for (const bookmark of bookmarks) {
+		let currentId = bookmark.folderId ?? null;
+		while (currentId && !neededIds.has(currentId)) {
+			const folder = foldersById.get(currentId);
+			if (!folder) break;
+			neededIds.add(currentId);
+			currentId = folder.parentId ?? null;
+		}
+	}
+
+	return folders.filter((folder) => neededIds.has(folder.id));
+}
 
 /**
  * Options for exporting bookmarks
@@ -8,6 +39,8 @@ export interface ExportOptions {
 	title?: string;
 	/** Include folder structure */
 	includeFolders?: boolean;
+	/** Tags used to resolve bookmark tag IDs to names (exported as a TAGS attribute) */
+	tags?: Tag[];
 }
 
 /**
@@ -22,7 +55,7 @@ export function exportBookmarksToHTML(
 	folders: Folder[],
 	options: ExportOptions = {}
 ): string {
-	const { title = 'Bookmarks', includeFolders = true } = options;
+	const { title = 'Bookmarks', includeFolders = true, tags = [] } = options;
 
 	// Build folder hierarchy map
 	const folderMap = new Map<string, Folder>();
@@ -41,7 +74,10 @@ export function exportBookmarksToHTML(
 	// Build bookmark-to-folder map
 	const bookmarksByFolder = new Map<string | null, Bookmark[]>();
 	bookmarks.forEach((bookmark) => {
-		const folderId = bookmark.folderId || null;
+		// Bookmarks whose folder isn't being exported (or no longer exists) go to the root
+		// instead of being silently dropped from the file
+		const folderId =
+			bookmark.folderId && folderMap.has(bookmark.folderId) ? bookmark.folderId : null;
 		if (!bookmarksByFolder.has(folderId)) {
 			bookmarksByFolder.set(folderId, []);
 		}
@@ -67,12 +103,14 @@ export function exportBookmarksToHTML(
 	const renderBookmark = (bookmark: Bookmark): string => {
 		const timestamp = formatTimestamp(bookmark.createdAt);
 		const icon = bookmark.faviconUrl ? ` ICON="${escapeHTML(bookmark.faviconUrl)}"` : '';
+		const tagNames = getTagNames(bookmark, tags);
+		const tagsAttr = tagNames.length > 0 ? ` TAGS="${escapeHTML(tagNames.join(','))}"` : '';
 		const description = bookmark.description
 			? `\n        <DD>${escapeHTML(bookmark.description)}`
 			: '';
 		const notes = bookmark.notes ? `\n        <DD>Notes: ${escapeHTML(bookmark.notes)}` : '';
 
-		return `        <DT><A HREF="${escapeHTML(bookmark.url)}" ADD_DATE="${timestamp}"${icon}>${escapeHTML(bookmark.title)}</A>${description}${notes}`;
+		return `        <DT><A HREF="${escapeHTML(bookmark.url)}" ADD_DATE="${timestamp}"${icon}${tagsAttr}>${escapeHTML(bookmark.title)}</A>${description}${notes}`;
 	};
 
 	// Recursive function to render a folder and its contents
@@ -166,6 +204,8 @@ export interface BookmarksExportData {
 	bookmarks: Bookmark[];
 	/** Array of folders */
 	folders: Folder[];
+	/** Array of tags referenced by bookmark tag IDs */
+	tags?: Tag[];
 }
 
 /**
@@ -174,12 +214,18 @@ export interface BookmarksExportData {
  * @param folders - Array of folders to export
  * @returns JSON string with complete bookmark data
  */
-export function exportBookmarksToJSON(bookmarks: Bookmark[], folders: Folder[]): string {
+export function exportBookmarksToJSON(
+	bookmarks: Bookmark[],
+	folders: Folder[],
+	tags: Tag[] = []
+): string {
+	const usedTagIds = new Set(bookmarks.flatMap((bookmark) => bookmark.tags));
 	const data: BookmarksExportData = {
-		version: '1.0',
+		version: '1.1',
 		exportedAt: Date.now(),
 		bookmarks,
-		folders
+		folders,
+		tags: tags.filter((tag) => usedTagIds.has(tag.id))
 	};
 
 	return JSON.stringify(data, null, 2);
@@ -194,9 +240,10 @@ export function exportBookmarksToJSON(bookmarks: Bookmark[], folders: Folder[]):
 export function downloadBookmarksJSON(
 	bookmarks: Bookmark[],
 	folders: Folder[],
-	filename: string = 'bookmarks.json'
+	filename: string = 'bookmarks.json',
+	tags: Tag[] = []
 ): void {
-	const json = exportBookmarksToJSON(bookmarks, folders);
+	const json = exportBookmarksToJSON(bookmarks, folders, tags);
 	const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
 	const url = URL.createObjectURL(blob);
 
@@ -217,7 +264,11 @@ export function downloadBookmarksJSON(
  * @param folders - Array of folders to export
  * @returns CSV string with bookmarks data
  */
-export function exportBookmarksToCSV(bookmarks: Bookmark[], folders: Folder[]): string {
+export function exportBookmarksToCSV(
+	bookmarks: Bookmark[],
+	folders: Folder[],
+	tags: Tag[] = []
+): string {
 	// Build folder map for quick lookup
 	const folderMap = new Map<string, Folder>();
 	folders.forEach((folder) => folderMap.set(folder.id, folder));
@@ -228,8 +279,10 @@ export function exportBookmarksToCSV(bookmarks: Bookmark[], folders: Folder[]): 
 
 		const path: string[] = [];
 		let currentId: string | null | undefined = folderId;
+		const seen = new Set<string>();
 
-		while (currentId) {
+		while (currentId && !seen.has(currentId)) {
+			seen.add(currentId);
 			const folder = folderMap.get(currentId);
 			if (!folder) break;
 			path.unshift(folder.name);
@@ -258,12 +311,12 @@ export function exportBookmarksToCSV(bookmarks: Bookmark[], folders: Folder[]): 
 		const url = escapeCSV(bookmark.url);
 		const title = escapeCSV(bookmark.title);
 		const folder = escapeCSV(getFolderPath(bookmark.folderId));
-		const tags = escapeCSV(bookmark.tags.join(', '));
+		const tagNames = escapeCSV(getTagNames(bookmark, tags).join(', '));
 		const description = escapeCSV(bookmark.description || '');
 		const notes = escapeCSV(bookmark.notes || '');
 		const createdAt = escapeCSV(new Date(bookmark.createdAt).toISOString());
 
-		rows.push(`${url},${title},${folder},${tags},${description},${notes},${createdAt}`);
+		rows.push(`${url},${title},${folder},${tagNames},${description},${notes},${createdAt}`);
 	});
 
 	return rows.join('\n');
@@ -278,9 +331,10 @@ export function exportBookmarksToCSV(bookmarks: Bookmark[], folders: Folder[]): 
 export function downloadBookmarksCSV(
 	bookmarks: Bookmark[],
 	folders: Folder[],
-	filename: string = 'bookmarks.csv'
+	filename: string = 'bookmarks.csv',
+	tags: Tag[] = []
 ): void {
-	const csv = exportBookmarksToCSV(bookmarks, folders);
+	const csv = exportBookmarksToCSV(bookmarks, folders, tags);
 	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 	const url = URL.createObjectURL(blob);
 

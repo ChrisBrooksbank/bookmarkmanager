@@ -96,6 +96,29 @@ export function getDomain(url: string): string {
 	return parsed?.hostname.replace(/^www\./, '').toLowerCase() ?? 'invalid-url';
 }
 
+/**
+ * Strip known tracking query parameters, leaving everything else (protocol, host,
+ * path, fragment) untouched. Safe to write back to a bookmark.
+ */
+export function removeTrackingParams(url: string): string {
+	const parsed = parseUrl(url);
+	if (!parsed) return url;
+
+	let changed = false;
+	for (const key of Array.from(parsed.searchParams.keys())) {
+		if (TRACKING_PARAMS.has(key.toLowerCase())) {
+			parsed.searchParams.delete(key);
+			changed = true;
+		}
+	}
+
+	return changed ? parsed.href : url;
+}
+
+/**
+ * Aggressive normalization for duplicate detection only (drops www, fragment,
+ * trailing slash and upgrades http). Never write this back to a bookmark.
+ */
 export function normalizeUrlForComparison(url: string): string {
 	const parsed = parseUrl(url);
 	if (!parsed) return url.trim().toLowerCase();

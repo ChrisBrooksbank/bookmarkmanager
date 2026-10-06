@@ -149,7 +149,22 @@ describe('uiStateStore', () => {
 		it('should not persist folder selection to localStorage', () => {
 			uiStateStore.setSelectedFolderId('folder-123');
 			const stored = JSON.parse(localStorageMock.getItem('ui-state') || '{}');
-			expect(stored.selectedFolderId).toBe(null);
+			expect(stored.selectedFolderId ?? null).toBe(null);
+		});
+
+		it('should not leak session filters into storage when a preference is saved', () => {
+			uiStateStore.setSelectedFolderId('folder-123');
+			uiStateStore.setSearchQuery('secret');
+			uiStateStore.setSelectedTagIds(['tag-1']);
+			uiStateStore.selectBookmarks(['bookmark-1']);
+			uiStateStore.setViewMode('list');
+
+			const stored = JSON.parse(localStorageMock.getItem('ui-state') || '{}');
+			expect(stored.viewMode).toBe('list');
+			expect(stored.selectedFolderId).toBeUndefined();
+			expect(stored.searchQuery).toBeUndefined();
+			expect(stored.selectedTagIds).toBeUndefined();
+			expect(stored.selectedBookmarkIds).toBeUndefined();
 		});
 
 		it('should make hasActiveFilters return true when folder is selected', () => {
@@ -195,7 +210,7 @@ describe('uiStateStore', () => {
 		it('should not persist tag selection to localStorage', () => {
 			uiStateStore.setSelectedTagIds(['tag-1', 'tag-2']);
 			const stored = JSON.parse(localStorageMock.getItem('ui-state') || '{}');
-			expect(stored.selectedTagIds).toEqual([]);
+			expect(stored.selectedTagIds ?? []).toEqual([]);
 		});
 
 		it('should make hasActiveFilters return true when tags are selected', () => {

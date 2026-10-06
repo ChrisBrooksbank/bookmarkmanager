@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
 	exportBookmarksToHTML,
 	exportBookmarksToJSON,
-	exportBookmarksToCSV
+	exportBookmarksToCSV,
+	getFoldersForBookmarks
 } from './exportBookmarks';
-import type { Bookmark, Folder } from '$lib/types';
+import { parseBookmarkFile } from './bookmarkParser';
+import type { Bookmark, Folder, Tag } from '$lib/types';
 import type { BookmarksExportData } from './exportBookmarks';
 
 describe('exportBookmarksToHTML', () => {
@@ -358,7 +360,7 @@ describe('exportBookmarksToJSON', () => {
 		const json = exportBookmarksToJSON([], []);
 		const data: BookmarksExportData = JSON.parse(json);
 
-		expect(data.version).toBe('1.0');
+		expect(data.version).toBe('1.1');
 		expect(data.exportedAt).toBeGreaterThan(0);
 		expect(data.bookmarks).toEqual([]);
 		expect(data.folders).toEqual([]);
@@ -491,7 +493,7 @@ describe('exportBookmarksToJSON', () => {
 		const json = exportBookmarksToJSON(bookmarks, folders);
 		const data: BookmarksExportData = JSON.parse(json);
 
-		expect(data.version).toBe('1.0');
+		expect(data.version).toBe('1.1');
 		expect(data.exportedAt).toBeGreaterThan(0);
 		expect(data.bookmarks).toHaveLength(2);
 		expect(data.folders).toHaveLength(2);
@@ -1050,5 +1052,67 @@ describe('exportBookmarksToCSV', () => {
 		// The description contains a double quote, so it should be wrapped in quotes and escaped
 		expect(lines[1]).toContain('Special chars: <>&');
 		expect(lines[1]).toContain('unicode: 日本語');
+	});
+});
+
+describe('tag names and partial exports', () => {
+	const tags: Tag[] = [
+		{ id: 'tag-uuid-1', name: 'research' },
+		{ id: 'tag-uuid-2', name: 'to read' }
+	];
+	const folders: Folder[] = [
+		{ id: 'f-root', name: 'Work', parentId: null, createdAt: 1609459200000 },
+		{ id: 'f-child', name: 'Papers', parentId: 'f-root', createdAt: 1609459200000 },
+		{ id: 'f-empty', name: 'Empty', parentId: null, createdAt: 1609459200000 }
+	];
+	const bookmark: Bookmark = {
+		id: 'b1',
+		url: 'https://example.com/paper',
+		title: 'Paper',
+		folderId: 'f-child',
+		tags: ['tag-uuid-1', 'tag-uuid-2'],
+		createdAt: 1609459200000,
+		updatedAt: 1609459200000
+	};
+
+	it('exports tag names, not tag IDs, to CSV', () => {
+		const csv = exportBookmarksToCSV([bookmark], folders, tags);
+		expect(csv).toContain('"research, to read"');
+		expect(csv).not.toContain('tag-uuid-1');
+	});
+
+	it('exports tag names as a TAGS attribute in HTML that re-imports', () => {
+		const html = exportBookmarksToHTML([bookmark], folders, { tags });
+		expect(html).toContain('TAGS="research,to read"');
+
+		const parsed = parseBookmarkFile(html, 'bookmarks.html');
+		expect(parsed.tagNamesByBookmarkId.get(parsed.bookmarks[0].id)).toEqual([
+			'research',
+			'to read'
+		]);
+	});
+
+	it('keeps bookmarks whose folder is missing instead of dropping them from HTML', () => {
+		const orphan: Bookmark = { ...bookmark, id: 'b2', folderId: 'deleted-folder' };
+		const html = exportBookmarksToHTML([orphan], folders);
+		expect(html).toContain('https://example.com/paper');
+	});
+
+	it('round-trips tags through JSON export and import', () => {
+		const json = exportBookmarksToJSON([bookmark], folders, tags);
+		const parsed = parseBookmarkFile(json, 'bookmarks.json');
+
+		expect(parsed.bookmarks).toHaveLength(1);
+		expect(parsed.tagNamesByBookmarkId.get(parsed.bookmarks[0].id)).toEqual([
+			'research',
+			'to read'
+		]);
+		const importedFolder = parsed.folders.find((folder) => folder.name === 'Papers');
+		expect(parsed.bookmarks[0].folderId).toBe(importedFolder?.id);
+	});
+
+	it('only includes folders used by a partial export', () => {
+		const used = getFoldersForBookmarks([bookmark], folders);
+		expect(used.map((folder) => folder.id).sort()).toEqual(['f-child', 'f-root']);
 	});
 });

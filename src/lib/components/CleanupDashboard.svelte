@@ -10,7 +10,7 @@
 		getDuplicateGroups,
 		getStaleCandidates,
 		getSuggestedTagGroups,
-		normalizeUrlForComparison,
+		removeTrackingParams,
 		type LinkHealthResult,
 		type LinkHealthStatus
 	} from '$lib/utils/bookmarkAudit';
@@ -36,18 +36,24 @@
 	let duplicateGroups = $derived(getDuplicateGroups(bookmarksStore.items));
 	let domainClusters = $derived(getDomainClusters(bookmarksStore.items));
 	let suggestedTagGroups = $derived(getSuggestedTagGroups(bookmarksStore.items, tagsStore.items));
-	let staleCandidates = $derived(getStaleCandidates(bookmarksStore.items, healthByBookmarkId));
+	let archiveTagId = $derived(getTagByName('archive')?.id ?? null);
+	// Archived bookmarks have already been reviewed, so keep them out of the queue
+	let staleCandidates = $derived(
+		getStaleCandidates(bookmarksStore.items, healthByBookmarkId).filter(
+			(candidate) => !archiveTagId || !candidate.bookmark.tags.includes(archiveTagId)
+		)
+	);
 	let reviewBookmarks = $derived(staleCandidates.map((candidate) => candidate.bookmark));
-	let reviewBookmark = $derived(reviewBookmarks[reviewIndex] ?? null);
+	// Clamp so the queue never shows "nothing to review" just because it shrank
+	let currentReviewIndex = $derived(Math.min(reviewIndex, Math.max(0, reviewBookmarks.length - 1)));
+	let reviewBookmark = $derived(reviewBookmarks[currentReviewIndex] ?? null);
 	let brokenBookmarkIds = $derived(
 		Object.values(healthResults)
 			.filter((result) => result.status === 'broken' || result.status === 'timeout')
 			.map((result) => result.bookmarkId)
 	);
 	let normalizedBookmarks = $derived(
-		bookmarksStore.items.filter(
-			(bookmark) => normalizeUrlForComparison(bookmark.url) !== bookmark.url
-		)
+		bookmarksStore.items.filter((bookmark) => removeTrackingParams(bookmark.url) !== bookmark.url)
 	);
 
 	function setTab(tab: CleanupTab) {
@@ -108,12 +114,14 @@
 	async function archiveBookmark(bookmark: Bookmark) {
 		const tag = await ensureTag('archive');
 		await bookmarksStore.bulkAddTags([bookmark.id], [tag.id]);
-		nextReview();
+		// The archived bookmark leaves the queue, so the next one slides into this index
+		reviewIndex = currentReviewIndex;
 	}
 
 	async function deleteReviewBookmark(bookmark: Bookmark) {
 		await bookmarksStore.remove(bookmark.id);
-		nextReview();
+		// The deleted bookmark leaves the queue, so the next one slides into this index
+		reviewIndex = currentReviewIndex;
 	}
 
 	function keepReviewBookmark() {
@@ -121,13 +129,13 @@
 	}
 
 	function nextReview() {
-		reviewIndex = Math.min(reviewIndex + 1, Math.max(0, reviewBookmarks.length - 1));
+		reviewIndex = Math.min(currentReviewIndex + 1, Math.max(0, reviewBookmarks.length - 1));
 	}
 
 	async function normalizeTrackingUrls() {
 		const updated = normalizedBookmarks.map((bookmark) => ({
 			...bookmark,
-			url: normalizeUrlForComparison(bookmark.url),
+			url: removeTrackingParams(bookmark.url),
 			updatedAt: Date.now()
 		}));
 		await bookmarksStore.updateMany(updated);
@@ -301,7 +309,7 @@
 			{:else}
 				<div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
 					<div class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-						{Math.min(reviewIndex + 1, reviewBookmarks.length)} of {reviewBookmarks.length}
+						{Math.min(currentReviewIndex + 1, reviewBookmarks.length)} of {reviewBookmarks.length}
 					</div>
 					<a
 						href={reviewBookmark.url}

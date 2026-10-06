@@ -16,15 +16,16 @@
 	import { tagsStore } from '$lib/stores/tags.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
 	import { onMount, setContext } from 'svelte';
-	import { browser } from '$app/environment';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { browser, dev } from '$app/environment';
 	import { createShortcutHandler, getDefaultShortcuts } from '$lib/utils/keyboard';
 	import { matchesBookmarkSearch } from '$lib/utils/bookmarkSearch';
 	import type { Folder, Bookmark } from '$lib/types';
 
 	let { children } = $props();
 
-	// Sidebar state
-	let sidebarOpen = $state(true);
+	// Sidebar state (only affects small screens; the sidebar is always visible from md up)
+	let sidebarOpen = $state(false);
 
 	// Modal state
 	let addBookmarkModalOpen = $state(false);
@@ -43,15 +44,48 @@
 	let parentIdForNewFolder = $state<string | null>(null);
 
 	// Expanded folders state
-	let expandedFolders = $state<Set<string>>(new Set());
+	const expandedFolders = new SvelteSet<string>();
 
 	let tagsById = $derived(new Map(tagsStore.items.map((tag) => [tag.id, tag])));
+	let sortedTags = $derived(
+		[...tagsStore.items].sort((a, b) =>
+			a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+		)
+	);
 	let foldersById = $derived(new Map(foldersStore.items.map((folder) => [folder.id, folder])));
 	let selectedBookmarks = $derived(
 		bookmarksStore.items.filter((bookmark) =>
 			uiStateStore.selectedBookmarkIds.includes(bookmark.id)
 		)
 	);
+
+	// Drop selections and filters that point at deleted bookmarks, folders or tags
+	$effect(() => {
+		if (bookmarksStore.loading) return;
+		const selectedIds = uiStateStore.selectedBookmarkIds;
+		if (selectedIds.length === 0) return;
+		const existingIds = new Set(bookmarksStore.items.map((bookmark) => bookmark.id));
+		const stillPresent = selectedIds.filter((id) => existingIds.has(id));
+		if (stillPresent.length !== selectedIds.length) {
+			uiStateStore.selectBookmarks(stillPresent);
+		}
+	});
+
+	$effect(() => {
+		if (foldersStore.loading) return;
+		const folderId = uiStateStore.selectedFolderId;
+		if (folderId && !foldersById.has(folderId)) {
+			uiStateStore.setSelectedFolderId(null);
+		}
+	});
+
+	$effect(() => {
+		if (tagsStore.loading) return;
+		const tagIds = uiStateStore.selectedTagIds;
+		if (tagIds.length > 0 && tagIds.some((tagId) => !tagsById.has(tagId))) {
+			uiStateStore.setSelectedTagIds(tagIds.filter((tagId) => tagsById.has(tagId)));
+		}
+	});
 
 	// Load stores on mount
 	onMount(() => {
@@ -68,9 +102,11 @@
 			const description = params.get('description');
 
 			if (url) {
-				urlParam = decodeURIComponent(url);
-				titleParam = title ? decodeURIComponent(title) : '';
-				descriptionParam = description ? decodeURIComponent(description) : '';
+				// URLSearchParams already percent-decodes values; decoding again corrupts
+				// URLs containing "%" and throws URIError on sequences like "100%".
+				urlParam = url;
+				titleParam = title ?? '';
+				descriptionParam = description ?? '';
 				// Open the add bookmark modal with pre-filled data
 				addBookmarkModalOpen = true;
 
@@ -81,28 +117,34 @@
 
 		// Register service worker update handler
 		if ('serviceWorker' in navigator) {
-			navigator.serviceWorker.register('/service-worker.js').then((registration) => {
-				// Check for updates periodically
-				setInterval(
-					() => {
-						registration.update();
-					},
-					60 * 60 * 1000
-				); // Check every hour
+			// In dev, SvelteKit serves the service worker as an ES module
+			navigator.serviceWorker
+				.register('/service-worker.js', { type: dev ? 'module' : 'classic' })
+				.then((registration) => {
+					// Check for updates periodically
+					setInterval(
+						() => {
+							registration.update();
+						},
+						60 * 60 * 1000
+					); // Check every hour
 
-				// Listen for new service worker
-				registration.addEventListener('updatefound', () => {
-					const newWorker = registration.installing;
-					if (newWorker) {
-						newWorker.addEventListener('statechange', () => {
-							if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-								// New service worker is ready, notify user
-								console.log('New version available. Refresh to update.');
-							}
-						});
-					}
+					// Listen for new service worker
+					registration.addEventListener('updatefound', () => {
+						const newWorker = registration.installing;
+						if (newWorker) {
+							newWorker.addEventListener('statechange', () => {
+								if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+									// New service worker is ready, notify user
+									console.log('New version available. Refresh to update.');
+								}
+							});
+						}
+					});
+				})
+				.catch((error) => {
+					console.warn('Service worker registration failed:', error);
 				});
-			});
 		}
 	});
 
@@ -238,7 +280,6 @@
 		} else {
 			expandedFolders.add(folderId);
 		}
-		expandedFolders = expandedFolders;
 	}
 
 	function cycleTheme() {
@@ -292,41 +333,27 @@
 		if (!folderToDelete) return;
 
 		try {
-			// Move all bookmarks in this folder and descendant folders to root
-			const descendantIds = [
-				folderToDelete.id,
-				...foldersStore.getDescendants(folderToDelete.id).map((f) => f.id)
-			];
-
-			// Load bookmarks if not already loaded
-			if (bookmarksStore.items.length === 0) {
-				await bookmarksStore.load();
-			}
-
-			// Update bookmarks that are in the deleted folder or its descendants
-			const bookmarksToUpdate = bookmarksStore.items.filter(
-				(b) => b.folderId && descendantIds.includes(b.folderId)
-			);
-
-			for (const bookmark of bookmarksToUpdate) {
-				await bookmarksStore.update({
-					...bookmark,
-					folderId: null
-				});
-			}
-
-			// Delete all descendant folders first
 			const descendants = foldersStore.getDescendants(folderToDelete.id);
-			for (const descendant of descendants) {
+			const deletedFolderIds = new Set([folderToDelete.id, ...descendants.map((f) => f.id)]);
+
+			// Move bookmarks in the deleted folder tree back to the root
+			const bookmarkIdsToMove = bookmarksStore.items
+				.filter((b) => b.folderId && deletedFolderIds.has(b.folderId))
+				.map((b) => b.id);
+			await bookmarksStore.bulkMoveToFolder(bookmarkIdsToMove, null);
+
+			// Delete descendants (deepest first) and then the folder itself
+			for (const descendant of [...descendants].reverse()) {
 				await foldersStore.remove(descendant.id);
 			}
-
-			// Delete the folder itself
 			await foldersStore.remove(folderToDelete.id);
 
-			// If the deleted folder was selected, deselect it
-			if (uiStateStore.selectedFolderId === folderToDelete.id) {
+			// Deselect if the selected folder was removed (including any subfolder)
+			if (uiStateStore.selectedFolderId && deletedFolderIds.has(uiStateStore.selectedFolderId)) {
 				uiStateStore.setSelectedFolderId(null);
+			}
+			for (const folderId of deletedFolderIds) {
+				expandedFolders.delete(folderId);
 			}
 
 			closeDeleteFolderModal();
@@ -343,7 +370,7 @@
 <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
 	<!-- Sidebar -->
 	<aside
-		class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 {sidebarOpen
+		class="fixed inset-y-0 left-0 z-20 md:static md:z-auto w-64 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 {sidebarOpen
 			? 'translate-x-0'
 			: '-translate-x-full'} md:translate-x-0"
 	>
@@ -415,7 +442,7 @@
 					{:else if tagsStore.items.length === 0}
 						<div class="text-sm text-gray-500 dark:text-gray-400 px-3 py-2">No tags yet</div>
 					{:else}
-						{#each tagsStore.items as tag (tag.id)}
+						{#each sortedTags as tag (tag.id)}
 							<button
 								onclick={() => toggleTag(tag.id)}
 								class="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 {uiStateStore.selectedTagIds.includes(
@@ -466,7 +493,7 @@
 	{#if sidebarOpen}
 		<button
 			onclick={toggleSidebar}
-			class="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
+			class="fixed inset-0 bg-black/50 z-10 md:hidden"
 			aria-label="Close sidebar"
 		></button>
 	{/if}
@@ -609,6 +636,7 @@
 					allBookmarks={bookmarksStore.items}
 					{selectedBookmarks}
 					folders={foldersStore.items}
+					tags={tagsStore.items}
 				/>
 			</div>
 		</header>
@@ -642,7 +670,7 @@
 <!-- Delete Folder Confirmation Modal -->
 {#if deleteFolderModalOpen && folderToDelete}
 	<div
-		class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+		class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
 		role="presentation"
 	>
 		<div

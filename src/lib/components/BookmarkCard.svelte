@@ -2,6 +2,7 @@
 	import type { Bookmark } from '$lib/types';
 	import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
 	import { uiStateStore } from '$lib/stores/uiState.svelte';
+	import { tagsStore } from '$lib/stores/tags.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { highlightText } from '$lib/utils/highlight';
 
@@ -13,6 +14,7 @@
 	let { bookmark, searchQuery = '' }: Props = $props();
 
 	let isSelected = $derived(uiStateStore.isBookmarkSelected(bookmark.id));
+	let bookmarkTags = $derived(tagsStore.getByIds(bookmark.tags));
 
 	let isEditing = $state(false);
 	let showDeleteConfirm = $state(false);
@@ -304,6 +306,23 @@
 						<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 						{@html highlightText(bookmark.notes, searchQuery)}
 					</p>
+				</div>
+			{/if}
+
+			<!-- Tags -->
+			{#if bookmarkTags.length > 0}
+				<div class="flex flex-wrap gap-1">
+					{#each bookmarkTags as tag (tag.id)}
+						<button
+							type="button"
+							onclick={() => uiStateStore.toggleSelectedTag(tag.id)}
+							class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:ring-1 hover:ring-blue-400 transition"
+							style={tag.color ? `background-color: ${tag.color}26; color: ${tag.color};` : ''}
+							title="Filter by #{tag.name}"
+						>
+							#{tag.name}
+						</button>
+					{/each}
 				</div>
 			{/if}
 

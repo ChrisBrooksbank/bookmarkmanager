@@ -85,4 +85,24 @@ describe('containsQuery', () => {
 	it('should handle partial matches', () => {
 		expect(containsQuery('JavaScript', 'Script')).toBe(true);
 	});
+
+	describe('HTML escaping', () => {
+		it('escapes markup in text with no query', () => {
+			expect(highlightText('<img src=x onerror=alert(1)>', '')).toBe(
+				'&lt;img src=x onerror=alert(1)&gt;'
+			);
+		});
+
+		it('escapes markup around and inside highlighted matches', () => {
+			expect(highlightText('<b>Tom & Jerry</b>', 'tom & j')).toBe(
+				'&lt;b&gt;<mark class="bg-yellow-200 dark:bg-yellow-600">Tom &amp; J</mark>erry&lt;/b&gt;'
+			);
+		});
+
+		it('does not let a query inject markup', () => {
+			expect(highlightText('a<b', '<')).toBe(
+				'a<mark class="bg-yellow-200 dark:bg-yellow-600">&lt;</mark>b'
+			);
+		});
+	});
 });

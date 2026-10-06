@@ -7,12 +7,10 @@
 	import BulkTagMenu from '$lib/components/BulkTagMenu.svelte';
 	import BulkFolderMenu from '$lib/components/BulkFolderMenu.svelte';
 	import BulkDeleteButton from '$lib/components/BulkDeleteButton.svelte';
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	import type { Bookmark } from '$lib/types';
 
-	onMount(() => {
-		bookmarksStore.load();
-	});
+	// Data is loaded once by the root layout
 
 	// Get filtered bookmarks from layout context
 	const filteredBookmarksContext = getContext<{ bookmarks: Bookmark[] }>('filteredBookmarks');

@@ -297,6 +297,7 @@ export function parseBookmarkManagerJSON(content: string): ParseResult {
 		const data = JSON.parse(content) as {
 			bookmarks?: Bookmark[];
 			folders?: Folder[];
+			tags?: Array<{ id?: string; name?: string }>;
 		};
 
 		if (!Array.isArray(data.bookmarks)) {
@@ -304,29 +305,32 @@ export function parseBookmarkManagerJSON(content: string): ParseResult {
 			return result;
 		}
 
-		const folderIds = new Set<string>();
+		// Map exported folder IDs to freshly generated ones
+		const folderIdMap = new Map<string, string>();
 		if (Array.isArray(data.folders)) {
 			for (const folder of data.folders) {
-				if (!folder?.id || !folder.name) continue;
+				if (!folder?.id || !folder.name || folderIdMap.has(folder.id)) continue;
 				const importedFolder: Folder = {
 					id: crypto.randomUUID(),
 					name: folder.name,
 					parentId: folder.parentId ?? null,
 					createdAt: folder.createdAt || Date.now()
 				};
-				folderIds.add(folder.id);
+				folderIdMap.set(folder.id, importedFolder.id);
 				result.folders.push(importedFolder);
 			}
 		}
-
-		const folderIdMap = new Map<string, string>();
-		Array.from(folderIds).forEach((oldId, index) => {
-			const folder = result.folders[index];
-			if (folder) folderIdMap.set(oldId, folder.id);
-		});
 		for (const folder of result.folders) {
 			if (folder.parentId) {
 				folder.parentId = folderIdMap.get(folder.parentId) ?? null;
+			}
+		}
+
+		// Exported tag definitions let us restore tag names (bookmarks only store IDs)
+		const tagNameById = new Map<string, string>();
+		if (Array.isArray(data.tags)) {
+			for (const tag of data.tags) {
+				if (tag?.id && tag.name?.trim()) tagNameById.set(tag.id, tag.name.trim());
 			}
 		}
 
@@ -347,6 +351,13 @@ export function parseBookmarkManagerJSON(content: string): ParseResult {
 				ogImage: item.ogImage
 			});
 			result.bookmarks.push(bookmark);
+
+			const tagNames = (Array.isArray(item.tags) ? item.tags : [])
+				.map((tagId) => tagNameById.get(tagId))
+				.filter((name): name is string => Boolean(name));
+			if (tagNames.length > 0) {
+				result.tagNamesByBookmarkId.set(bookmark.id, tagNames);
+			}
 		}
 	} catch (error) {
 		result.errors.push(
