@@ -2,6 +2,8 @@
 
 # 🔖 BookmarkVault
 
+**Live demo:** [bookmark-vault.netlify.app](https://bookmark-vault.netlify.app)
+
 ### Your bookmarks. Your browser. Nobody else's server.
 
 A **local-first, offline-ready PWA** bookmark manager built for power users and researchers —
