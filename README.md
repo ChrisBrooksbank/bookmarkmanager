@@ -2,6 +2,10 @@
 
 # 🔖 BookmarkVault
 
+<!-- hub-link -->
+> Part of [Chris's app hub](https://chrisbrooksbank-hub.netlify.app) - a directory of all my deployed apps.
+<!-- /hub-link -->
+
 **Live demo:** [bookmark-vault.netlify.app](https://bookmark-vault.netlify.app)
 
 ### Your bookmarks. Your browser. Nobody else's server.
